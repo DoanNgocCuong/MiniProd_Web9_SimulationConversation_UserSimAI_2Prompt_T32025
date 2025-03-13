@@ -2,10 +2,12 @@ version: '3.8'
 
 services:
   backend:
-    build: 
+    build:
       context: ./backend
+    image: backend-web-simulation-conv-doanngoccuong:latest
     ports:
-      - "25050:8000"
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     restart: unless-stopped
     container_name: websim-backend
     environment:
@@ -14,15 +16,16 @@ services:
   frontend:
     build:
       context: ./frontend
+    image: frontend-web-simulation-conv-doanngoccuong:latest
     ports:
-      - "25051:80"
+      - "80:80"
     restart: unless-stopped
     container_name: websim-frontend
     depends_on:
       - backend
     environment:
-      - VITE_BACKEND_URL=ws://localhost:25050
+      - VITE_BACKEND_URL=ws://localhost:8000
 
 networks:
   default:
-    name: websim-network 
+    name: web-simulation-conv-doanngoccuong 

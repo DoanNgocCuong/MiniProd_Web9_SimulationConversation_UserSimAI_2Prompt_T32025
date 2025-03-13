@@ -1,4 +1,3 @@
-
 import { Message, Role } from '@/types/conversation';
 
 // This is a mock class that simulates WebSocket for development
@@ -23,7 +22,7 @@ export class MockWebSocketService {
     setTimeout(() => {
       this.isOpen = true;
       this.triggerCallbacks('open', {});
-    }, 500);
+    }, 500) as unknown as number;
   }
 
   addEventListener(event: string, callback: (event: any) => void) {
@@ -81,7 +80,7 @@ export class MockWebSocketService {
     // Send a message every few seconds to simulate conversation
     this.intervalId = window.setInterval(() => {
       this.simulateMessage();
-    }, 2000 + Math.random() * 2000);
+    }, 2000 + Math.random() * 2000) as unknown as number;
   }
 
   private stopConversation() {
@@ -135,7 +134,7 @@ export class MockWebSocketService {
     const message: Message = {
       role,
       content: messageContent,
-      timestamp: Date.now()
+      timestamp: new Date().toISOString()
     };
     
     this.triggerCallbacks('message', message);

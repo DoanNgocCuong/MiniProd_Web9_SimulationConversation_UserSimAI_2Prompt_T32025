@@ -8,8 +8,8 @@ import UserPromptList from '@/components/UserPromptList';
 import ConversationDisplay from '@/components/ConversationDisplay';
 import { createWebSocket } from '@/services/mockWebSocket';
 import { cn } from '@/lib/utils';
-import { Play, StopCircle } from 'lucide-react';
-import { websocketService } from "@/services/websocketService";
+import { Play, StopCircle, PauseCircle, Loader2 } from 'lucide-react';
+import websocketService from "@/services/websocketService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
@@ -19,85 +19,43 @@ const Index = () => {
   ]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  // Connect to WebSocket when component mounts
   useEffect(() => {
-    const connectWebSocket = async () => {
-      try {
-        await websocketService.connect();
+    // Connect to WebSocket when component mounts
+    setIsConnecting(true);
+    websocketService.connect({
+      onConnected: () => {
         setIsConnected(true);
-      } catch (error) {
-        console.error("Failed to connect to WebSocket:", error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to simulation server.",
-          variant: "destructive",
+        setIsConnecting(false);
+        toast.success('Connected to server');
+      },
+      onDisconnected: () => {
+        setIsConnected(false);
+        setIsConnecting(true);
+        toast.error('Disconnected from server');
+      },
+      onError: (error) => {
+        console.error('WebSocket error:', error);
+        toast.error('Connection error');
+      },
+      onConversationUpdate: (updatedConversation) => {
+        setConversations(prevConversations => {
+          const index = prevConversations.findIndex(c => c.id === updatedConversation.id);
+          if (index >= 0) {
+            const newConversations = [...prevConversations];
+            newConversations[index] = updatedConversation;
+            return newConversations;
+          } else {
+            return [...prevConversations, updatedConversation];
+          }
         });
       }
-    };
+    });
 
-    connectWebSocket();
-
-    // Handle conversations created
-    const removeConversationsHandler = websocketService.onMessage(
-      "conversations_created",
-      (event) => {
-        const data = JSON.parse(event.data);
-        const newConversations = data.conversations.map(
-          (conversation: any) => ({
-            id: conversation.id,
-            userPromptId: conversation.userPromptId,
-            messages: [],
-            isActive: true,
-          })
-        );
-        setConversations(newConversations);
-      }
-    );
-
-    // Handle new messages
-    const removeMessageHandler = websocketService.onMessage(
-      "message",
-      (event) => {
-        const data = JSON.parse(event.data);
-        setConversations((prevConversations) => 
-          prevConversations.map((conversation) => {
-            if (conversation.id === data.conversation_id) {
-              return {
-                ...conversation,
-                messages: [...conversation.messages, data.message],
-              };
-            }
-            return conversation;
-          })
-        );
-      }
-    );
-
-    // Handle conversation completion
-    const removeCompletionHandler = websocketService.onMessage(
-      "completion",
-      (event) => {
-        const data = JSON.parse(event.data);
-        setConversations((prevConversations) =>
-          prevConversations.map((conversation) => {
-            if (conversation.id === data.conversation_id) {
-              return {
-                ...conversation,
-                isActive: false,
-              };
-            }
-            return conversation;
-          })
-        );
-      }
-    );
-
+    // Cleanup on unmount
     return () => {
-      removeConversationsHandler();
-      removeMessageHandler();
-      removeCompletionHandler();
       websocketService.disconnect();
     };
   }, []);
@@ -137,73 +95,58 @@ const Index = () => {
   };
 
   const handleStartSimulation = () => {
-    // Validate inputs
+    if (!isConnected) {
+      toast.error('Not connected to server');
+      return;
+    }
+
     if (!agentPrompt.trim()) {
-      toast({
-        title: "Missing Agent Prompt",
-        description: "Please enter an Agent prompt before starting.",
-        variant: "destructive",
-      });
+      toast.error('Agent prompt cannot be empty');
       return;
     }
 
-    const selectedPrompts = userPrompts.filter((p) => p.isSelected);
+    const selectedPrompts = userPrompts.filter(p => p.isSelected);
     if (selectedPrompts.length === 0) {
-      toast({
-        title: "No User Prompts Selected",
-        description: "Please select at least one User prompt before starting.",
-        variant: "destructive",
-      });
+      toast.error('Select at least one user prompt');
       return;
     }
 
-    const emptyPrompts = selectedPrompts.filter((p) => !p.content.trim());
-    if (emptyPrompts.length > 0) {
-      toast({
-        title: "Empty User Prompts",
-        description: "Some selected User prompts are empty. Please fill them in.",
-        variant: "destructive",
-      });
+    if (selectedPrompts.some(p => !p.content.trim())) {
+      toast.error('Selected user prompts cannot be empty');
       return;
     }
 
-    // Clear previous conversations
+    // Reset conversations
     setConversations([]);
-    setIsSimulating(true);
-
-    // Start new conversations
+    
+    // Start the simulation
     websocketService.startConversations(agentPrompt, userPrompts);
+    setIsRunning(true);
+    toast.success('Simulation started');
   };
 
   const hasActiveConversations = conversations.some(conv => conv.isActive);
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <h1 className="text-3xl font-bold mb-8 text-center">
-        AI Conversation Simulator
-      </h1>
+    <div className="container py-6 flex flex-col min-h-screen gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">AI Conversation Simulator</h1>
+        <p className="text-muted-foreground">
+          Create conversations between an agent and multiple user prompts
+        </p>
+      </header>
 
-      <div className="grid grid-cols-1 gap-8 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Agent Configuration</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+        <div className="flex flex-col gap-4">
+          <div className="space-y-4">
             <PromptInput
               label="Agent"
               value={agentPrompt}
               onChange={handleAgentPromptChange}
-              placeholder="Enter the prompt for the Agent role (AI assistant)..."
-              height="min-h-[150px]"
+              placeholder="Enter the prompt for the Agent role..."
+              className="bg-card/60 border rounded-lg shadow-sm"
             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>User Prompts</CardTitle>
-          </CardHeader>
-          <CardContent>
+            
             <UserPromptList
               userPrompts={userPrompts}
               onContentChange={handleUserPromptContentChange}
@@ -211,26 +154,36 @@ const Index = () => {
               onAddPrompt={handleAddUserPrompt}
               onDeletePrompt={handleDeleteUserPrompt}
             />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex justify-center mb-8">
-        <Button
-          size="lg"
-          onClick={handleStartSimulation}
-          disabled={!isConnected || isSimulating && conversations.length === 0}
-          className="px-8"
-        >
-          {!isConnected 
-            ? "Connecting..." 
-            : (isSimulating && conversations.length === 0) 
-              ? "Starting..." 
-              : "Start Simulation"}
-        </Button>
-      </div>
-
-      <div className="h-[600px]">
+          </div>
+          
+          <div className="mt-auto">
+            <Button 
+              onClick={handleStartSimulation}
+              disabled={isConnecting || !isConnected || isRunning}
+              className="w-full py-6"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : !isConnected ? (
+                <>Disconnected</>
+              ) : isRunning ? (
+                <>
+                  <PauseCircle />
+                  Simulation in progress
+                </>
+              ) : (
+                <>
+                  <Play />
+                  Start Simulation
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+        
         <ConversationDisplay conversations={conversations} />
       </div>
     </div>
