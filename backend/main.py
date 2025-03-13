@@ -3,10 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 import asyncio
 import uuid
-from datetime import datetime
-from typing import Dict, List
-import time
-import random
+import os
+from dotenv import load_dotenv
+import openai
+
+from connection_manager import ConnectionManager
+from conversation_simulator import simulate_conversation_with_openai, simulate_conversation_with_api
+
+# Load environment variables
+load_dotenv()
+
+# Configure OpenAI API
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
 
@@ -19,77 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Store for active connections
-active_connections: Dict[str, WebSocket] = {}
-
-class ConnectionManager:
-    async def connect(self, websocket: WebSocket, client_id: str):
-        await websocket.accept()
-        active_connections[client_id] = websocket
-        
-    def disconnect(self, client_id: str):
-        if client_id in active_connections:
-            del active_connections[client_id]
-            
-    async def send_message(self, message: dict, client_id: str):
-        if client_id in active_connections:
-            await active_connections[client_id].send_json(message)
-
+# Create connection manager
 manager = ConnectionManager()
-
-async def simulate_conversation(agent_prompt: str, user_prompt: str, conversation_id: str, client_id: str):
-    """Simulate a conversation between agent and user prompts"""
-    
-    # Initialize conversation with the first message from Agent
-    current_turn = "Agent"
-    turns = 0
-    max_turns = 5  # Limit to 5 back-and-forth exchanges
-    
-    # Simulate first message from agent
-    await asyncio.sleep(1)  # Add a small delay for realism
-    first_message = {
-        "type": "message",
-        "conversation_id": conversation_id,
-        "message": {
-            "role": "Agent",
-            "content": f"Hello! I'm your AI assistant based on this prompt: '{agent_prompt[:30]}...'",
-            "timestamp": datetime.now().isoformat()
-        }
-    }
-    await manager.send_message(first_message, client_id)
-    
-    # Alternate between agent and user responses
-    while turns < max_turns:
-        await asyncio.sleep(2 + random.random() * 3)  # Random delay between 2-5 seconds
-        
-        if current_turn == "Agent":
-            current_turn = "User"
-            message_content = f"As a user with prompt '{user_prompt[:20]}...', I have a question about {random.choice(['pricing', 'features', 'support', 'documentation', 'use cases'])}"
-        else:
-            current_turn = "Agent"
-            message_content = f"Based on my programming: '{agent_prompt[:20]}...', I can tell you that {random.choice(['we offer flexible plans', 'our features include AI capabilities', 'our support team is available 24/7', 'comprehensive documentation is available', 'typical use cases include automation'])}"
-        
-        message = {
-            "type": "message",
-            "conversation_id": conversation_id,
-            "message": {
-                "role": current_turn,
-                "content": message_content,
-                "timestamp": datetime.now().isoformat()
-            }
-        }
-        
-        await manager.send_message(message, client_id)
-        turns += 1
-    
-    # Send completion message
-    await asyncio.sleep(1)
-    completion_message = {
-        "type": "completion",
-        "conversation_id": conversation_id,
-        "message": "Conversation completed"
-    }
-    await manager.send_message(completion_message, client_id)
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
@@ -101,8 +40,11 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             data_json = json.loads(data)
             
             if data_json["type"] == "start_conversation":
-                agent_prompt = data_json["agent_prompt"]
+                agent_mode = data_json.get("agent_mode", "prompt")  # "prompt" or "bot_id"
+                agent_prompt = data_json.get("agent_prompt", "")
+                bot_id = data_json.get("bot_id", 16)
                 user_prompts = data_json["user_prompts"]
+                max_turns = data_json.get("max_turns", 5)  # Default to 5 turns if not specified
                 
                 # Create a response with conversation IDs
                 conversations = []
@@ -124,14 +66,29 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 tasks = []
                 for idx, user_prompt in enumerate(user_prompts):
                     conversation_id = conversations[idx]["id"]
-                    task = asyncio.create_task(
-                        simulate_conversation(
-                            agent_prompt, 
-                            user_prompt["content"], 
-                            conversation_id,
-                            client_id
+                    
+                    if agent_mode == "bot_id":
+                        task = asyncio.create_task(
+                            simulate_conversation_with_api(
+                                user_prompt["content"], 
+                                conversation_id,
+                                client_id,
+                                manager,
+                                bot_id,
+                                max_turns
+                            )
                         )
-                    )
+                    else:  # agent_mode == "prompt"
+                        task = asyncio.create_task(
+                            simulate_conversation_with_openai(
+                                agent_prompt, 
+                                user_prompt["content"], 
+                                conversation_id,
+                                client_id,
+                                manager,
+                                max_turns
+                            )
+                        )
                     tasks.append(task)
                 
                 # Let the conversations run in the background

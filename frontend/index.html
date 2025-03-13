@@ -24,12 +24,16 @@
             const [connectionStatus, setConnectionStatus] = React.useState("disconnected");
             const websocketRef = React.useRef(null);
             const clientIdRef = React.useRef(`client-${Date.now()}`);
+            const [agentMode, setAgentMode] = React.useState("prompt");
+            const [botId, setBotId] = React.useState(16);
 
             // Initialize WebSocket connection
             React.useEffect(() => {
                 const connectWebSocket = () => {
                     // Hardcode the WebSocket URL for testing
-                    const wsUrl = 'ws://103.253.20.13:25050';
+                    const wsUrl = window.location.hostname === 'localhost' 
+                        ? 'ws://localhost:25050' 
+                        : `ws://${window.location.hostname}:25050`;
                     const ws = new WebSocket(`${wsUrl}/ws/${clientIdRef.current}`);
                     
                     ws.onopen = () => {
@@ -130,32 +134,31 @@
             };
 
             const startSimulation = () => {
-                if (!agentPrompt.trim()) {
-                    alert("Please enter an agent prompt");
+                if (agentMode === "prompt" && agentPrompt.trim() === "") {
+                    alert("Please enter an agent prompt or select Bot ID mode.");
                     return;
                 }
-                
-                const selectedPrompts = userPrompts.filter(p => p.selected && p.content.trim());
+
+                const selectedPrompts = userPrompts.filter(p => p.selected);
                 if (selectedPrompts.length === 0) {
-                    alert("Please select at least one user prompt");
+                    alert("Please select at least one user prompt.");
                     return;
                 }
-                
+
                 setIsSimulating(true);
-                
-                // Clear previous conversations
                 setConversations([]);
-                
-                // Send start message to server
+
+                const message = {
+                    type: "start_conversation",
+                    agent_mode: agentMode,
+                    agent_prompt: agentPrompt,
+                    bot_id: botId,
+                    user_prompts: selectedPrompts,
+                    max_turns: 5
+                };
+
                 if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
-                    websocketRef.current.send(JSON.stringify({
-                        type: "start_conversation",
-                        agent_prompt: agentPrompt,
-                        user_prompts: selectedPrompts
-                    }));
-                } else {
-                    alert("WebSocket connection not ready. Please try again.");
-                    setIsSimulating(false);
+                    websocketRef.current.send(JSON.stringify(message));
                 }
             };
 
@@ -167,51 +170,110 @@
             };
 
             return (
-                <div className={`min-h-screen p-4 ${isDarkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"}`}>
-                    <div className="max-w-6xl mx-auto">
-                        {/* Header Controls */}
-                        <div className="flex justify-between mb-4 items-center">
-                            <div className={`px-3 py-1 rounded ${
-                                connectionStatus === "connected" ? "bg-green-500" : 
-                                connectionStatus === "disconnected" ? "bg-red-500" : "bg-yellow-500"
-                            } text-white`}>
-                                {connectionStatus === "connected" ? "Connected" : 
-                                connectionStatus === "disconnected" ? "Disconnected" : "Connecting..."}
+                <div className={`min-h-screen p-4 ${isDarkMode ? "bg-gradient-to-b from-gray-900 to-gray-800" : "bg-gradient-to-b from-gray-50 to-white"} text-gray-900`}>
+                    <div className="max-w-4xl mx-auto">
+                        <div className="sticky top-0 z-50 backdrop-blur-lg bg-opacity-70 p-4 rounded-2xl mb-6 flex justify-between items-center">
+                            <h1 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                AI Conversation Simulator
+                            </h1>
+                            <div className="flex items-center gap-4">
+                                <div className={`px-3 py-1 rounded-full ${connectionStatus === "connected" ? "bg-green-500" : "bg-red-500"} text-white text-sm`}>
+                                    {connectionStatus === "connected" ? "Connected" : "Disconnected"}
+                                </div>
+                                <button
+                                    onClick={() => setIsDarkMode(!isDarkMode)}
+                                    className="px-6 py-2.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-medium transform transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg"
+                                >
+                                    {isDarkMode ? "Light Mode" : "Dark Mode"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Agent Mode Selection */}
+                        <div className="backdrop-blur-xl bg-opacity-80 p-6 rounded-2xl shadow-xl mb-6 transform transition-all duration-300 hover:shadow-2xl"
+                            style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
+                        >
+                            <div className="flex items-center mb-4 justify-between">
+                                <label className={`font-semibold text-lg ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                                    Agent Mode
+                                </label>
+                                <div className="flex items-center space-x-6">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="promptModeRadio"
+                                            name="agentMode"
+                                            className="mr-2 w-5 h-5"
+                                            checked={agentMode === "prompt"}
+                                            onChange={() => setAgentMode("prompt")}
+                                        />
+                                        <label htmlFor="promptModeRadio" className={`${isDarkMode ? "text-white" : "text-gray-700"} text-base`}>
+                                            Use Prompt
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="botIdModeRadio"
+                                            name="agentMode"
+                                            className="mr-2 w-5 h-5"
+                                            checked={agentMode === "bot_id"}
+                                            onChange={() => setAgentMode("bot_id")}
+                                        />
+                                        <label htmlFor="botIdModeRadio" className={`${isDarkMode ? "text-white" : "text-gray-700"} text-base`}>
+                                            Use Bot ID
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <button
-                                onClick={() => setIsDarkMode(!isDarkMode)}
-                                className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
-                            >
-                                {isDarkMode ? "Light Mode" : "Dark Mode"}
-                            </button>
+                            {agentMode === "bot_id" && (
+                                <div className="mb-2">
+                                    <label className={`block mb-2 ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                                        Bot ID:
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={botId}
+                                        onChange={(e) => setBotId(parseInt(e.target.value) || 16)}
+                                        placeholder="Enter Bot ID"
+                                        className={`w-full p-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 ${
+                                            isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                        }`}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Agent Prompt Input */}
-                        <div className="sticky top-0 z-10 bg-opacity-95 p-4 rounded-lg shadow-lg mb-6"
-                            style={{ backgroundColor: isDarkMode ? "#1a1a1a" : "#ffffff" }}
-                        >
-                            <textarea
-                                value={agentPrompt}
-                                onChange={(e) => setAgentPrompt(e.target.value)}
-                                placeholder="Enter Agent Prompt"
-                                className={`w-full p-4 rounded-lg border-2 focus:ring-2 focus:ring-blue-500 outline-none ${isDarkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200 text-black"}`}
-                                rows="4"
-                                disabled={isSimulating}
-                            />
-                        </div>
+                        {agentMode === "prompt" && (
+                            <div className="backdrop-blur-xl bg-opacity-80 p-6 rounded-2xl shadow-xl mb-6 transform transition-all duration-300 hover:shadow-2xl"
+                                style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
+                            >
+                                <textarea
+                                    value={agentPrompt}
+                                    onChange={(e) => setAgentPrompt(e.target.value)}
+                                    placeholder="Enter Agent Prompt"
+                                    className={`w-full p-4 rounded-xl border-2 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 ${isDarkMode ? "bg-gray-800/50 border-gray-700 text-white" : "bg-white/50 border-gray-200 text-black"}`}
+                                    rows="4"
+                                    disabled={isSimulating}
+                                />
+                            </div>
+                        )}
 
                         {/* User Prompts Section */}
-                        <div className={`p-6 rounded-lg mb-6 ${isDarkMode ? "bg-gray-800" : "bg-white"} shadow-lg`}>
-                            <h2 className="text-xl font-bold mb-4">User Prompts</h2>
+                        <div className={`p-8 rounded-2xl mb-8 shadow-xl backdrop-blur-lg transition-all duration-300 hover:shadow-2xl`}
+                            style={{ backgroundColor: isDarkMode ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)" }}
+                        >
+                            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? "text-white" : "text-gray-800"}`}>User Prompts</h2>
                             <div className="space-y-4">
                                 {userPrompts.map((prompt) => (
-                                    <div key={prompt.id} className="flex items-center gap-4">
+                                    <div key={prompt.id} className="flex items-center gap-4 group">
                                         <input
                                             type="checkbox"
                                             checked={prompt.selected}
                                             onChange={() => togglePromptSelection(prompt.id)}
-                                            className="w-5 h-5 rounded text-blue-500"
+                                            className="w-6 h-6 rounded-lg text-blue-500 transition-transform duration-200 hover:scale-110"
                                             disabled={isSimulating}
                                         />
                                         <input
@@ -219,77 +281,90 @@
                                             value={prompt.content}
                                             onChange={(e) => updatePromptText(prompt.id, e.target.value)}
                                             placeholder={`User Prompt ${prompt.id}`}
-                                            className={`flex-1 p-2 rounded-lg border ${isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-50 border-gray-200 text-black"}`}
+                                            className={`flex-1 p-3 rounded-xl border-2 transition-all duration-200 focus:ring-4 focus:ring-blue-500/20 ${
+                                                isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-gray-50/50 border-gray-200 text-black"
+                                            }`}
                                             disabled={isSimulating}
                                         />
                                         <button
                                             onClick={() => deletePrompt(prompt.id)}
-                                            className={`p-2 text-red-500 hover:bg-red-100 rounded-full ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                                            className={`p-3 text-red-500 hover:bg-red-100/20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${
+                                                isSimulating || userPrompts.length <= 1 ? "opacity-50 cursor-not-allowed" : ""
+                                            }`}
                                             disabled={isSimulating || userPrompts.length <= 1}
                                         >
-                                            <span>🗑️</span>
+                                            <FiIcons.FiTrash2 size={20} />
                                         </button>
                                     </div>
                                 ))}
                             </div>
                             <button
                                 onClick={addNewPrompt}
-                                className={`mt-4 flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                                className={`mt-6 flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transform transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg ${
+                                    isSimulating ? "opacity-50 cursor-not-allowed" : ""
+                                }`}
                                 disabled={isSimulating}
                             >
-                                <span>➕</span> Add New Prompt
+                                <FiIcons.FiPlus /> Add New Prompt
                             </button>
                         </div>
 
                         {/* Control Buttons */}
-                        <div className="flex gap-4 mb-6">
+                        <div className="flex gap-4 mb-8">
                             <button
                                 onClick={startSimulation}
-                                disabled={isSimulating || connectionStatus !== "connected"}
-                                className={`flex-1 py-3 px-6 rounded-lg flex items-center justify-center gap-2 ${
-                                isSimulating || connectionStatus !== "connected" 
-                                    ? "bg-gray-400 cursor-not-allowed" 
-                                    : "bg-blue-500 hover:bg-blue-600"
-                                } text-white`}
+                                disabled={isSimulating}
+                                className={`flex-1 py-4 px-8 rounded-full flex items-center justify-center gap-3 ${
+                                    isSimulating ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                                } text-white font-medium transform transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg`}
                             >
-                                <span>▶️</span> {isSimulating ? "Simulating..." : "Start Simulation"}
+                                <FiIcons.FiPlay /> {isSimulating ? "Simulating..." : "Start Simulation"}
                             </button>
                             <button
                                 onClick={resetSimulation}
-                                className={`flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 ${
-                                isSimulating ? "opacity-50 cursor-not-allowed" : ""
+                                className={`flex items-center gap-3 px-8 py-4 bg-red-500 text-white rounded-full hover:bg-red-600 transform transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg ${
+                                    isSimulating ? "opacity-50 cursor-not-allowed" : ""
                                 }`}
                                 disabled={isSimulating}
                             >
-                                <span>🔄</span> Reset
+                                <FiIcons.FiRefreshCw /> Reset
                             </button>
                         </div>
 
                         {/* Conversations Display */}
-                        <div className="space-y-6">
+                        <div className="space-y-8">
                             {conversations.length === 0 && !isSimulating && (
-                                <div className={`p-6 rounded-lg ${isDarkMode ? "bg-gray-800" : "bg-white"} shadow-lg text-center`}>
-                                    No conversations yet. Configure your prompts and start a simulation.
+                                <div className={`p-6 rounded-2xl shadow-xl backdrop-blur-lg text-center transition-all duration-300 hover:shadow-2xl`}
+                                    style={{ backgroundColor: isDarkMode ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)" }}
+                                >
+                                    <p className={`text-lg ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                                        No conversations yet. Configure your prompts and start a simulation.
+                                    </p>
                                 </div>
                             )}
                             
                             {conversations.map((conv) => (
                                 <div
                                     key={conv.id}
-                                    className={`p-6 rounded-lg ${isDarkMode ? "bg-gray-800" : "bg-white"} shadow-lg`}
+                                    className={`p-6 rounded-2xl shadow-xl backdrop-blur-lg transition-all duration-300 hover:shadow-2xl`}
+                                    style={{ backgroundColor: isDarkMode ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)" }}
                                 >
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-semibold">Conversation #{String(conv.id).substring(0, 8)}...</h3>
-                                        <span className={`px-2 py-1 rounded text-xs ${
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className={`text-xl font-semibold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                            Conversation #{String(conv.id).substring(0, 8)}...
+                                        </h3>
+                                        <span className={`px-3 py-1 rounded-full text-xs ${
                                             conv.status === "completed" ? "bg-green-500" : "bg-yellow-500"
                                         } text-white`}>
                                             {conv.status === "completed" ? "Completed" : "In Progress"}
                                         </span>
                                     </div>
                                     
-                                    <div className="space-y-4">
+                                    <div className="space-y-6">
                                         {conv.messages.length === 0 ? (
-                                            <div className="text-center text-gray-500">Waiting for messages...</div>
+                                            <div className={`text-center ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                Waiting for messages...
+                                            </div>
                                         ) : (
                                             conv.messages.map((msg, idx) => (
                                                 <div
@@ -297,15 +372,19 @@
                                                     className={`flex ${msg.role === "Agent" ? "justify-start" : "justify-end"}`}
                                                 >
                                                     <div
-                                                        className={`max-w-[70%] p-4 rounded-lg ${
+                                                        className={`max-w-[70%] p-4 rounded-2xl transform transition-all duration-200 hover:scale-[1.02] ${
                                                             msg.role === "Agent" 
-                                                                ? (isDarkMode ? "bg-blue-900" : "bg-blue-100") 
-                                                                : (isDarkMode ? "bg-green-900" : "bg-green-100")
+                                                                ? (isDarkMode ? "bg-blue-600/40" : "bg-blue-100") 
+                                                                : (isDarkMode ? "bg-green-600/40" : "bg-green-100")
                                                         }`}
                                                     >
-                                                        <p className="text-sm font-semibold mb-1">{msg.role}</p>
-                                                        <p>{msg.content}</p>
-                                                        <p className="text-xs opacity-70 mt-2">
+                                                        <p className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                                            {msg.role}
+                                                        </p>
+                                                        <p className={`leading-relaxed ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                                            {msg.content}
+                                                        </p>
+                                                        <p className={`text-xs mt-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                                                             {new Date(msg.timestamp).toLocaleTimeString()}
                                                         </p>
                                                     </div>

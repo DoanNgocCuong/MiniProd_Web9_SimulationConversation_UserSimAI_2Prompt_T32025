@@ -1,1 +1,27 @@
 *.env/CKP/src/.env
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# Node modules
+node_modules/
+
+# Docker volumes
+data/
