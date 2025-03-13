@@ -40,6 +40,9 @@
             const [botId, setBotId] = React.useState(16);
             const [maxTurns, setMaxTurns] = React.useState(5);
 
+            // Cập nhật danh sách Bot ID hợp lệ
+            const validBotIds = [16, 17, 18, 19, 20]; // Thêm các Bot ID khác nếu biết
+
             // Initialize WebSocket connection
             React.useEffect(() => {
                 const connectWebSocket = () => {
@@ -107,6 +110,34 @@
                                         : conv
                                 )
                             );
+                        }
+                        else if (data.type === "error") {
+                            // Handle error messages
+                            setConversations(prev => 
+                                prev.map(conv => 
+                                    conv.id === data.conversation_id
+                                        ? { 
+                                            ...conv, 
+                                            status: "error",
+                                            error: data.message,
+                                            messages: [...conv.messages, {
+                                                role: "System",
+                                                content: `Error: ${data.message}`,
+                                                timestamp: new Date().toISOString()
+                                            }]
+                                        }
+                                        : conv
+                                )
+                            );
+                            
+                            // If all conversations have errors or are completed, stop simulating
+                            const allDone = prev => prev.every(conv => 
+                                conv.status === "completed" || conv.status === "error"
+                            );
+                            
+                            if (allDone(conversations)) {
+                                setIsSimulating(false);
+                            }
                         }
                     };
                     
@@ -255,7 +286,12 @@
                                         className={`w-full p-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 ${
                                             isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                         }`}
+                                        disabled={isSimulating}
                                     />
+                                    <p className={`text-sm mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                        Bot ID là định danh của bot trong hệ thống. Bot ID 16 đã được xác nhận hoạt động tốt. 
+                                        Bạn có thể thử các Bot ID khác như 17, 18, 19, 20 để kiểm tra khả năng tương thích.
+                                    </p>
                                 </div>
                             )}
 
@@ -323,121 +359,92 @@
                                         />
                                         <button
                                             onClick={() => deletePrompt(prompt.id)}
-                                            className={`p-3 text-red-500 hover:bg-red-100/20 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                                isSimulating || userPrompts.length <= 1 ? "opacity-50 cursor-not-allowed" : ""
-                                            }`}
-                                            disabled={isSimulating || userPrompts.length <= 1}
+                                            className="text-red-500 hover:text-red-700"
+                                            disabled={isSimulating}
                                         >
-                                            <span role="img" aria-label="delete">🗑️</span>
+                                            Delete
                                         </button>
                                     </div>
                                 ))}
                             </div>
-                            <button
-                                onClick={addNewPrompt}
-                                className={`mt-6 flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transform transition-all duration-200 hover-scale active-scale shadow-lg ${
-                                    isSimulating ? "opacity-50 cursor-not-allowed" : ""
-                                }`}
-                                disabled={isSimulating}
-                            >
-                                <span role="img" aria-label="add">➕</span> Add New Prompt
-                            </button>
-                        </div>
 
-                        {/* Control Buttons */}
-                        <div className="flex gap-4 mb-8">
-                            <button
-                                onClick={startSimulation}
-                                disabled={isSimulating}
-                                className={`flex-1 py-4 px-8 rounded-full flex items-center justify-center gap-3 ${
-                                    isSimulating ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                                } text-white font-medium transform transition-all duration-200 hover-scale active-scale shadow-lg`}
-                            >
-                                <span role="img" aria-label="play">▶️</span> {isSimulating ? "Simulating..." : "Start Simulation"}
-                            </button>
-                            <button
-                                onClick={resetSimulation}
-                                className={`flex items-center gap-3 px-8 py-4 bg-red-500 text-white rounded-full hover:bg-red-600 transform transition-all duration-200 hover-scale active-scale shadow-lg ${
-                                    isSimulating ? "opacity-50 cursor-not-allowed" : ""
-                                }`}
-                                disabled={isSimulating}
-                            >
-                                <span role="img" aria-label="reset">🔄</span> Reset
-                            </button>
-                        </div>
-
-                        {/* Conversations Display */}
-                        <div className="space-y-8">
-                            {conversations.length === 0 && !isSimulating && (
-                                <div className={`p-6 rounded-2xl shadow-xl backdrop-blur-lg text-center transition-all duration-300 hover:shadow-2xl`}
-                                    style={{ backgroundColor: isDarkMode ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)" }}
+                            {/* Simulation Controls */}
+                            <div className="mt-8 flex items-center justify-between">
+                                <button
+                                    onClick={startSimulation}
+                                    className="px-6 py-2.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-medium transform transition-all duration-200 hover-scale active-scale shadow-lg"
+                                    disabled={isSimulating}
                                 >
-                                    <p className={`${isDarkMode ? "text-white" : "text-gray-700"}`}>
-                                        No conversations yet. Configure your prompts and start a simulation.
-                                    </p>
-                                </div>
-                            )}
-                            
-                            {conversations.map((conv) => (
-                                <div
-                                    key={conv.id}
-                                    className={`p-6 rounded-2xl shadow-xl backdrop-blur-lg transition-all duration-300 hover:shadow-2xl`}
-                                    style={{ backgroundColor: isDarkMode ? "rgba(31, 41, 55, 0.9)" : "rgba(255, 255, 255, 0.9)" }}
+                                    {isSimulating ? "Simulating..." : "Start Simulation"}
+                                </button>
+                                <button
+                                    onClick={resetSimulation}
+                                    className="px-6 py-2.5 rounded-full bg-gray-500 hover:bg-gray-600 text-white font-medium transform transition-all duration-200 hover-scale active-scale shadow-lg"
                                 >
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className={`text-xl font-semibold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                            Conversation #{String(conv.id).substring(0, 8)}...
-                                        </h3>
-                                        <span className={`px-3 py-1.5 rounded-full text-xs ${
-                                            conv.status === "completed" ? "bg-green-500" : "bg-yellow-500"
-                                        } text-white font-medium`}>
-                                            {conv.status === "completed" ? "Completed" : "In Progress"}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="space-y-6">
-                                        {conv.messages.length === 0 ? (
-                                            <div className={`text-center ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                                Waiting for messages...
-                                            </div>
-                                        ) : (
-                                            conv.messages.map((msg, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className={`flex ${msg.role === "Agent" ? "justify-start" : "justify-end"}`}
-                                                >
-                                                    <div
-                                                        className={`max-w-[70%] p-4 rounded-2xl transform transition-all duration-200 hover:scale-102 ${
-                                                            msg.role === "Agent" 
-                                                                ? (isDarkMode ? "bg-blue-600/40" : "bg-blue-100") 
-                                                                : (isDarkMode ? "bg-green-600/40" : "bg-green-100")
-                                                        }`}
-                                                    >
-                                                        <p className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                                            {msg.role}
-                                                        </p>
-                                                        <p className={`leading-relaxed ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                                            {msg.content}
-                                                        </p>
-                                                        <p className={`text-xs mt-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                                            {new Date(msg.timestamp).toLocaleTimeString()}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                    Reset Simulation
+                                </button>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Conversations Display */}
+                    {conversations.length > 0 && (
+                        <div className="mt-8">
+                            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                Simulated Conversations
+                            </h2>
+                            <div className="space-y-8">
+                                {conversations.map((conv) => (
+                                    <div key={conv.id} className={`p-6 rounded-2xl shadow-lg ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className={`font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                                Conversation {conv.id.substring(0, 8)}...
+                                            </h3>
+                                            <span className={`px-3 py-1 rounded-full text-sm ${
+                                                conv.status === "completed" ? "bg-green-100 text-green-800" : 
+                                                conv.status === "error" ? "bg-red-100 text-red-800" : 
+                                                "bg-blue-100 text-blue-800"
+                                            }`}>
+                                                {conv.status === "completed" ? "Completed" : 
+                                                 conv.status === "error" ? "Error" : 
+                                                 "In Progress"}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="space-y-4">
+                                            {conv.messages.map((msg, idx) => (
+                                                <div key={idx} className={`p-4 rounded-xl ${
+                                                    msg.role === "User" ? 
+                                                    (isDarkMode ? "bg-blue-900/30 text-blue-100" : "bg-blue-100 text-blue-900") : 
+                                                    msg.role === "Agent" ? 
+                                                    (isDarkMode ? "bg-purple-900/30 text-purple-100" : "bg-purple-100 text-purple-900") :
+                                                    (isDarkMode ? "bg-red-900/30 text-red-100" : "bg-red-100 text-red-900")
+                                                }`}>
+                                                    <div className="font-bold mb-1">{msg.role}</div>
+                                                    <div style={{whiteSpace: "pre-wrap"}}>{msg.content}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {conv.status === "error" && (
+                                            <div className={`p-4 rounded-2xl bg-red-100 border border-red-300 mt-4 ${isDarkMode ? "text-red-200" : "text-red-800"}`}>
+                                                <p className="font-semibold">Lỗi:</p>
+                                                <p>{conv.error || "Đã xảy ra lỗi không xác định"}</p>
+                                                <p className="text-sm mt-2">
+                                                    Gợi ý: Nếu lỗi liên quan đến Bot ID, hãy thử sử dụng Bot ID 16 thay thế.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
 
-        // Use the modern React 18 API
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<AIConversationSimulator />);
+        ReactDOM.render(<AIConversationSimulator />, document.getElementById("root"));
     </script>
 </body>
-</html> 
+</html>

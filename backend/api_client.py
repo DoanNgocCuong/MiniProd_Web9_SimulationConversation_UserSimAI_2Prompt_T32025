@@ -16,13 +16,17 @@ class AICoachAPI:
         self.current_conversation_id = None
         self.timeout = timeout
         self.bot_id = bot_id
+        self.last_error = ""
+        print(f"[AICoachAPI] Initialized with bot_id={bot_id}, base_url={base_url}")
 
     def init_conversation(self) -> bool:
-        """Initializes a new conversation and generates a unique conversation ID."""
-        timestamp = int(time.time() * 1000)  # Convert to milliseconds
-        random_suffix = str(random.randint(100, 999))
-        conversation_id = f"conv_{timestamp}_{random_suffix}"
+        """Initializes a new conversation with the bot."""
+        # Tạo conversation_id đơn giản
+        # Quan trọng: Theo tài liệu, conversation_id có thể là bất kỳ chuỗi nào
+        timestamp = int(time.time())
+        conversation_id = f"{timestamp}{random.randint(1000, 9999)}"
         
+        # Chuẩn bị payload theo tài liệu
         payload = {
             "bot_id": self.bot_id,
             "conversation_id": conversation_id,
@@ -34,32 +38,66 @@ class AICoachAPI:
             print(f"[AICoachAPI] Endpoint: {self.init_endpoint}")
             print(f"[AICoachAPI] Payload: {json.dumps(payload, indent=2)}")
             
+            # Headers theo tài liệu
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            
+            # Gửi yêu cầu
             response = requests.post(
                 self.init_endpoint,
-                headers={'Content-Type': 'application/json'},
+                headers=headers,
                 json=payload,
                 timeout=self.timeout
             )
-            response.raise_for_status()
             
-            print(f"[AICoachAPI] Init successful. Response: {json.dumps(response.json(), indent=2)}")
-            self.current_conversation_id = conversation_id
-            return True
+            print(f"[AICoachAPI] Init response status: {response.status_code}")
             
+            # Kiểm tra mã trạng thái
+            if response.status_code != 200:
+                self.last_error = f"API trả về mã lỗi: {response.status_code}. {response.text}"
+                print(f"[AICoachAPI] Error: Non-200 status code: {response.status_code}")
+                print(f"[AICoachAPI] Response: {response.text}")
+                return False
+                
+            # Phân tích phản hồi
+            try:
+                response_data = response.json()
+                print(f"[AICoachAPI] Init successful. Response: {json.dumps(response_data, indent=2)}")
+                
+                # Kiểm tra phản hồi theo tài liệu
+                # Theo tài liệu, phản hồi thành công có "status": 0, "msg": "Success"
+                if "status" in response_data and (response_data["status"] == 0 or response_data["status"] == "0" or response_data["status"] == "OK"):
+                    self.current_conversation_id = conversation_id
+                    return True
+                else:
+                    self.last_error = f"API trả về trạng thái không hợp lệ: {response_data.get('status')}. {response_data.get('msg', '')}"
+                    print(f"[AICoachAPI] Error: Invalid response format or status not OK")
+                    return False
+            except ValueError:
+                self.last_error = "Phản hồi không phải là JSON hợp lệ"
+                print(f"[AICoachAPI] Error: Invalid JSON response")
+                return False
+                
         except requests.Timeout:
-            print("[AICoachAPI] Error: Request timed out during initialization")
+            self.last_error = "Yêu cầu hết thời gian chờ"
+            print("[AICoachAPI] Error: Request timed out while initializing conversation")
             return False
         except requests.RequestException as e:
-            print(f"[AICoachAPI] Error during initialization: {str(e)}")
+            self.last_error = f"Lỗi kết nối: {str(e)}"
+            print(f"[AICoachAPI] Error initializing conversation: {str(e)}")
+            return False
+        except Exception as e:
+            self.last_error = f"Lỗi không xác định: {str(e)}"
+            print(f"[AICoachAPI] Unexpected error initializing conversation: {str(e)}")
             return False
 
-    async def send_message(self, message: str) -> Tuple[str, float, Dict[str, Any]]:
-        """Sends a message to the bot and returns the response, response time, and full response data."""
+    def send_message(self, message: str) -> Tuple[str, float, Dict[str, Any]]:
+        """Sends a message to the bot and returns the response."""
         if not self.current_conversation_id:
-            print("[AICoachAPI] Error: No active conversation. Initializing new one...")
-            if not self.init_conversation():
-                return "Failed to initialize conversation.", 0, {}
-
+            return "No active conversation. Please initialize first.", 0, {}
+        
+        # Chuẩn bị payload theo tài liệu
         payload = {
             "conversation_id": self.current_conversation_id,
             "message": message
@@ -70,30 +108,48 @@ class AICoachAPI:
             print(f"[AICoachAPI] Endpoint: {self.webhook_endpoint}")
             print(f"[AICoachAPI] Payload: {json.dumps(payload, indent=2)}")
             
+            # Headers theo tài liệu
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            
             start_time = time.time()
             response = requests.post(
                 self.webhook_endpoint,
-                headers={'Content-Type': 'application/json'},
+                headers=headers,
                 json=payload,
                 timeout=self.timeout
             )
             end_time = time.time()
             response_time = end_time - start_time
             
-            response.raise_for_status()
-            # Get response data
-            response_data = response.json()
-            print(f"[AICoachAPI] Message sent successfully. Response: {json.dumps(response_data, indent=2)}")
+            print(f"[AICoachAPI] Message response status: {response.status_code}")
             
-            # Extract the text response
-            if response_data and "text" in response_data and len(response_data["text"]) > 0:
-                return response_data["text"][0], response_time, response_data
-            else:
-                return "No response from bot.", response_time, response_data
+            if response.status_code != 200:
+                print(f"[AICoachAPI] Error: Non-200 status code: {response.status_code}")
+                print(f"[AICoachAPI] Response: {response.text}")
+                return f"Error: API returned status code {response.status_code}", response_time, {}
+                
+            try:
+                response_data = response.json()
+                print(f"[AICoachAPI] Message sent successfully. Response: {json.dumps(response_data, indent=2)}")
+                
+                # Trích xuất phản hồi theo tài liệu
+                # Theo tài liệu, phản hồi có "text" là mảng các chuỗi
+                if response_data and "text" in response_data and len(response_data["text"]) > 0:
+                    return response_data["text"][0], response_time, response_data
+                else:
+                    return "No response from bot.", response_time, response_data
+            except ValueError:
+                print(f"[AICoachAPI] Error: Invalid JSON response")
+                return "Error: Invalid response format", response_time, {}
             
         except requests.Timeout:
             print("[AICoachAPI] Error: Request timed out while sending message")
             return "Request timed out.", 0, {}
         except requests.RequestException as e:
             print(f"[AICoachAPI] Error sending message: {str(e)}")
+            return f"Error: {str(e)}", 0, {}
+        except Exception as e:
+            print(f"[AICoachAPI] Unexpected error sending message: {str(e)}")
             return f"Error: {str(e)}", 0, {} 

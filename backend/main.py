@@ -92,10 +92,17 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     tasks.append(task)
                 
                 # Let the conversations run in the background
-                asyncio.gather(*tasks)
+                asyncio.gather(*[run_task_with_error_handling(task) for task in tasks])
                 
     except WebSocketDisconnect:
         manager.disconnect(client_id)
+
+async def run_task_with_error_handling(task):
+    """Run a task and handle any exceptions."""
+    try:
+        await task
+    except Exception as e:
+        print(f"Task error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
