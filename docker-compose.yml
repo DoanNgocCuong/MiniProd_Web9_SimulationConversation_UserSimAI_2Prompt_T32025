@@ -6,25 +6,25 @@ services:
       context: ./backend
     image: backend-web-simulation-conv-doanngoccuong:latest
     ports:
-      - "8000:8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - "25050:25050"
+    command: uvicorn main:app --host 0.0.0.0 --port 25050 --reload
     restart: unless-stopped
     container_name: websim-backend
     environment:
-      - CORS_ORIGINS=http://localhost:25051,http://frontend:80
+      - CORS_ORIGINS=http://localhost:25051,http://frontend:80,http://103.253.20.13:25051
 
   frontend:
     build:
       context: ./frontend
     image: frontend-web-simulation-conv-doanngoccuong:latest
     ports:
-      - "80:80"
+      - "25051:80"
     restart: unless-stopped
     container_name: websim-frontend
     depends_on:
       - backend
     environment:
-      - VITE_BACKEND_URL=ws://localhost:8000
+      - VITE_BACKEND_URL=ws://103.253.20.13:25050
 
 networks:
   default:
