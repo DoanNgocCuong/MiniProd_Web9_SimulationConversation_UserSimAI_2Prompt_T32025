@@ -44,7 +44,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 agent_prompt = data_json.get("agent_prompt", "")
                 bot_id = data_json.get("bot_id", 16)
                 user_prompts = data_json["user_prompts"]
-                max_turns = data_json.get("max_turns", 5)  # Default to 5 turns if not specified
+                max_turns = data_json.get("max_turns", 5)  # Get max_turns from frontend, default to 5
                 
                 # Create a response with conversation IDs
                 conversations = []
@@ -75,7 +75,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 client_id,
                                 manager,
                                 bot_id,
-                                max_turns
+                                max_turns  # Pass max_turns to the simulator
                             )
                         )
                     else:  # agent_mode == "prompt"
@@ -86,7 +86,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 conversation_id,
                                 client_id,
                                 manager,
-                                max_turns
+                                max_turns  # Pass max_turns to the simulator
                             )
                         )
                     tasks.append(task)
