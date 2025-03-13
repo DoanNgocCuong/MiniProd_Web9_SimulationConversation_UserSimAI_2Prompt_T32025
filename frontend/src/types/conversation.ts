@@ -1,10 +1,9 @@
-
 export type Role = 'Agent' | 'User';
 
 export interface Message {
-  role: Role;
+  role: string;
   content: string;
-  timestamp: number;
+  timestamp: string;
 }
 
 export interface Conversation {

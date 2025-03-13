@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from "sonner";
@@ -10,6 +9,8 @@ import ConversationDisplay from '@/components/ConversationDisplay';
 import { createWebSocket } from '@/services/mockWebSocket';
 import { cn } from '@/lib/utils';
 import { Play, StopCircle } from 'lucide-react';
+import { websocketService } from "@/services/websocketService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const [agentPrompt, setAgentPrompt] = useState('');
@@ -17,19 +18,89 @@ const Index = () => {
     { id: uuidv4(), content: '', isSelected: true }
   ]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [sockets, setSockets] = useState<Record<string, WebSocket>>({});
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
-  // Clean up WebSockets when component unmounts
+  // Connect to WebSocket when component mounts
   useEffect(() => {
-    return () => {
-      Object.values(sockets).forEach(socket => {
-        if (socket) {
-          socket.close();
-        }
-      });
+    const connectWebSocket = async () => {
+      try {
+        await websocketService.connect();
+        setIsConnected(true);
+      } catch (error) {
+        console.error("Failed to connect to WebSocket:", error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to simulation server.",
+          variant: "destructive",
+        });
+      }
     };
-  }, [sockets]);
+
+    connectWebSocket();
+
+    // Handle conversations created
+    const removeConversationsHandler = websocketService.onMessage(
+      "conversations_created",
+      (event) => {
+        const data = JSON.parse(event.data);
+        const newConversations = data.conversations.map(
+          (conversation: any) => ({
+            id: conversation.id,
+            userPromptId: conversation.userPromptId,
+            messages: [],
+            isActive: true,
+          })
+        );
+        setConversations(newConversations);
+      }
+    );
+
+    // Handle new messages
+    const removeMessageHandler = websocketService.onMessage(
+      "message",
+      (event) => {
+        const data = JSON.parse(event.data);
+        setConversations((prevConversations) => 
+          prevConversations.map((conversation) => {
+            if (conversation.id === data.conversation_id) {
+              return {
+                ...conversation,
+                messages: [...conversation.messages, data.message],
+              };
+            }
+            return conversation;
+          })
+        );
+      }
+    );
+
+    // Handle conversation completion
+    const removeCompletionHandler = websocketService.onMessage(
+      "completion",
+      (event) => {
+        const data = JSON.parse(event.data);
+        setConversations((prevConversations) =>
+          prevConversations.map((conversation) => {
+            if (conversation.id === data.conversation_id) {
+              return {
+                ...conversation,
+                isActive: false,
+              };
+            }
+            return conversation;
+          })
+        );
+      }
+    );
+
+    return () => {
+      removeConversationsHandler();
+      removeMessageHandler();
+      removeCompletionHandler();
+      websocketService.disconnect();
+    };
+  }, []);
 
   const handleAgentPromptChange = (value: string) => {
     setAgentPrompt(value);
@@ -63,242 +134,105 @@ const Index = () => {
     
     // Also remove any active conversations using this prompt
     setConversations(prev => prev.filter(conv => conv.userPromptId !== id));
-    
-    // Close the corresponding socket
-    if (sockets[id]) {
-      sockets[id].close();
-      setSockets(prev => {
-        const newSockets = { ...prev };
-        delete newSockets[id];
-        return newSockets;
-      });
-    }
   };
 
-  const handleStartConversation = () => {
+  const handleStartSimulation = () => {
+    // Validate inputs
     if (!agentPrompt.trim()) {
-      toast.error("Please fill in the Agent Prompt before starting");
+      toast({
+        title: "Missing Agent Prompt",
+        description: "Please enter an Agent prompt before starting.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const selectedPrompts = userPrompts.filter(p => p.isSelected);
-    
+    const selectedPrompts = userPrompts.filter((p) => p.isSelected);
     if (selectedPrompts.length === 0) {
-      toast.error("Please select at least one User Prompt before starting");
+      toast({
+        title: "No User Prompts Selected",
+        description: "Please select at least one User prompt before starting.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const emptySelectedPrompts = selectedPrompts.filter(p => !p.content.trim());
-    if (emptySelectedPrompts.length > 0) {
-      toast.error("Please fill in all selected User Prompts before starting");
+    const emptyPrompts = selectedPrompts.filter((p) => !p.content.trim());
+    if (emptyPrompts.length > 0) {
+      toast({
+        title: "Empty User Prompts",
+        description: "Some selected User prompts are empty. Please fill them in.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setIsConnecting(true);
+    // Clear previous conversations
+    setConversations([]);
+    setIsSimulating(true);
 
-    // Start a new conversation for each selected prompt
-    selectedPrompts.forEach(userPrompt => {
-      // If there's already an active conversation for this prompt, skip it
-      if (conversations.some(conv => conv.userPromptId === userPrompt.id && conv.isActive)) {
-        toast.info(`Conversation for User Prompt ${userPrompt.id.slice(-4)} is already in progress`);
-        return;
-      }
-
-      // Create a new conversation
-      const newConversationId = uuidv4();
-      setConversations(prev => [
-        ...prev.filter(c => c.userPromptId !== userPrompt.id), // Remove previous conversations with this prompt
-        {
-          id: newConversationId,
-          userPromptId: userPrompt.id,
-          messages: [],
-          isActive: true
-        }
-      ]);
-
-      try {
-        // For development, use our mock WebSocket
-        const ws = createWebSocket('ws://localhost:8000/ws');
-        
-        // Store the socket reference
-        setSockets(prev => ({
-          ...prev,
-          [userPrompt.id]: ws
-        }));
-
-        ws.onopen = () => {
-          console.log(`WebSocket connection established for prompt ${userPrompt.id}`);
-          
-          // Send the initial prompts to start the conversation
-          ws.send(JSON.stringify({
-            action: 'start',
-            agentPrompt,
-            userPrompt: userPrompt.content
-          }));
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            // Handle complete message
-            if (data.type === 'complete') {
-              setConversations(prev => 
-                prev.map(conv => 
-                  conv.id === newConversationId ? { ...conv, isActive: false } : conv
-                )
-              );
-              toast.success(`Conversation for User Prompt ${userPrompt.id.slice(-4)} completed`);
-              return;
-            }
-            
-            // Handle new message
-            setConversations(prev => 
-              prev.map(conv => 
-                conv.id === newConversationId 
-                  ? { ...conv, messages: [...conv.messages, data] } 
-                  : conv
-              )
-            );
-          } catch (error) {
-            console.error('Error parsing message:', error);
-          }
-        };
-
-        ws.onclose = () => {
-          console.log(`WebSocket connection closed for prompt ${userPrompt.id}`);
-          setConversations(prev => 
-            prev.map(conv => 
-              conv.id === newConversationId ? { ...conv, isActive: false } : conv
-            )
-          );
-        };
-
-        ws.onerror = (error) => {
-          console.error(`WebSocket error for prompt ${userPrompt.id}:`, error);
-          toast.error(`Connection error for User Prompt ${userPrompt.id.slice(-4)}. Please try again.`);
-          setConversations(prev => 
-            prev.map(conv => 
-              conv.id === newConversationId ? { ...conv, isActive: false } : conv
-            )
-          );
-        };
-      } catch (error) {
-        console.error(`Error creating WebSocket for prompt ${userPrompt.id}:`, error);
-        toast.error(`Failed to establish connection for User Prompt ${userPrompt.id.slice(-4)}`);
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === newConversationId ? { ...conv, isActive: false } : conv
-          )
-        );
-      }
-    });
-
-    setIsConnecting(false);
-  };
-
-  const handleStopConversations = () => {
-    // Stop all active conversations
-    Object.entries(sockets).forEach(([promptId, socket]) => {
-      if (socket) {
-        socket.send(JSON.stringify({ action: 'stop' }));
-      }
-    });
-
-    // Mark all conversations as inactive
-    setConversations(prev => 
-      prev.map(conv => ({ ...conv, isActive: false }))
-    );
+    // Start new conversations
+    websocketService.startConversations(agentPrompt, userPrompts);
   };
 
   const hasActiveConversations = conversations.some(conv => conv.isActive);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-accent/20">
-      <div className="fixed inset-0 bg-primary/5 -z-10">
-        <div className="absolute inset-0 bg-grid-slate-400/[0.05] bg-[length:32px_32px]"></div>
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <h1 className="text-3xl font-bold mb-8 text-center">
+        AI Conversation Simulator
+      </h1>
+
+      <div className="grid grid-cols-1 gap-8 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Agent Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PromptInput
+              label="Agent"
+              value={agentPrompt}
+              onChange={handleAgentPromptChange}
+              placeholder="Enter the prompt for the Agent role (AI assistant)..."
+              height="min-h-[150px]"
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>User Prompts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UserPromptList
+              userPrompts={userPrompts}
+              onContentChange={handleUserPromptContentChange}
+              onSelectionChange={handleUserPromptSelectionChange}
+              onAddPrompt={handleAddUserPrompt}
+              onDeletePrompt={handleDeleteUserPrompt}
+            />
+          </CardContent>
+        </Card>
       </div>
-      
-      <main className="flex-1 container max-w-6xl py-12 px-4 sm:px-6">
-        {/* Header */}
-        <div className="text-center mb-10 space-y-2 animate-fade-in">
-          <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
-            AI Conversation Simulator
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-            AI Ping-Pong Conversation
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Set up AI conversation prompts and watch the AIs converse with each other in real-time.
-          </p>
-        </div>
 
-        {/* Agent Prompt */}
-        <div className="mb-6">
-          <PromptInput
-            label="Agent"
-            value={agentPrompt}
-            onChange={handleAgentPromptChange}
-            placeholder="Enter the prompt for the Agent role..."
-            className="md:transform hover:-rotate-1 transition-transform"
-            height="min-h-[150px]"
-          />
-        </div>
+      <div className="flex justify-center mb-8">
+        <Button
+          size="lg"
+          onClick={handleStartSimulation}
+          disabled={!isConnected || isSimulating && conversations.length === 0}
+          className="px-8"
+        >
+          {!isConnected 
+            ? "Connecting..." 
+            : (isSimulating && conversations.length === 0) 
+              ? "Starting..." 
+              : "Start Simulation"}
+        </Button>
+      </div>
 
-        {/* User Prompts */}
-        <div className="mb-8">
-          <UserPromptList
-            userPrompts={userPrompts}
-            onContentChange={handleUserPromptContentChange}
-            onSelectionChange={handleUserPromptSelectionChange}
-            onAddPrompt={handleAddUserPrompt}
-            onDeletePrompt={handleDeleteUserPrompt}
-          />
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex justify-center mb-10">
-          <Button
-            onClick={hasActiveConversations ? handleStopConversations : handleStartConversation}
-            className={cn(
-              "start-button min-w-[200px] py-6 rounded-xl shadow-lg flex items-center justify-center gap-2 text-lg",
-              hasActiveConversations
-                ? "bg-destructive hover:bg-destructive/90"
-                : "bg-primary hover:bg-primary/90"
-            )}
-            disabled={isConnecting || (!agentPrompt.trim() || userPrompts.every(p => !p.isSelected))}
-          >
-            {isConnecting ? (
-              <>
-                <div className="animate-spin w-5 h-5 border-2 border-current border-t-transparent rounded-full" />
-                Connecting...
-              </>
-            ) : hasActiveConversations ? (
-              <>
-                <StopCircle className="w-5 h-5" />
-                Stop Conversations
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5" />
-                Start Simulation
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Conversation Display */}
-        <div className="h-[500px] animate-fade-in opacity-0" style={{ animationDelay: '300ms' }}>
-          <ConversationDisplay conversations={conversations} />
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="py-6 border-t bg-card/50 backdrop-blur-sm">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>AI Conversation Simulator &copy; {new Date().getFullYear()}</p>
-        </div>
-      </footer>
+      <div className="h-[600px]">
+        <ConversationDisplay conversations={conversations} />
+      </div>
     </div>
   );
 };

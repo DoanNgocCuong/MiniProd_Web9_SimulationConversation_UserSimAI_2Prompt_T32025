@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "25050:8000"
+    restart: unless-stopped
+    container_name: websim-backend
+    environment:
+      - CORS_ORIGINS=http://localhost:25051,http://frontend:80
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "25051:80"
+    restart: unless-stopped
+    container_name: websim-frontend
+    depends_on:
+      - backend
+    environment:
+      - VITE_BACKEND_URL=ws://localhost:25050
+
+networks:
+  default:
+    name: websim-network 
