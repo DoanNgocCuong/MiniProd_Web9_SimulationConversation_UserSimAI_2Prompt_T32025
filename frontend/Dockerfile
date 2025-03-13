@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 # Copy static files directly
-COPY . /usr/share/nginx/html/
+COPY index.html /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Fix permissions for nginx
