@@ -101,6 +101,25 @@
                                 )
                             );
                         }
+                        else if (data.type === "status") {
+                            // Hiển thị thông báo trạng thái
+                            setConversations(prev => 
+                                prev.map(conv => 
+                                    conv.id === data.conversation_id
+                                        ? {
+                                            ...conv,
+                                            status: "in_progress",
+                                            statusMessage: data.message,
+                                            messages: [...conv.messages, {
+                                                role: "System",
+                                                content: data.message,
+                                                timestamp: new Date().toISOString()
+                                            }]
+                                        }
+                                        : conv
+                                )
+                            );
+                        }
                         else if (data.type === "completion") {
                             // Mark conversation as completed
                             setConversations(prev => 

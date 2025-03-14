@@ -2,6 +2,7 @@ import time
 import json
 import requests
 import random
+import asyncio
 from typing import Optional, Dict, Any, Tuple
 
 class AICoachAPI:
@@ -19,7 +20,7 @@ class AICoachAPI:
         self.last_error = ""
         print(f"[AICoachAPI] Initialized with bot_id={bot_id}, base_url={base_url}")
 
-    def init_conversation(self) -> bool:
+    async def init_conversation(self) -> bool:
         """Initializes a new conversation with the bot."""
         # Tạo conversation_id đơn giản
         # Quan trọng: Theo tài liệu, conversation_id có thể là bất kỳ chuỗi nào
@@ -43,12 +44,16 @@ class AICoachAPI:
                 'Content-Type': 'application/json'
             }
             
-            # Gửi yêu cầu
-            response = requests.post(
-                self.init_endpoint,
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
+            # Sử dụng asyncio để thực hiện yêu cầu HTTP không đồng bộ
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: requests.post(
+                    self.init_endpoint,
+                    headers=headers,
+                    json=payload,
+                    timeout=self.timeout
+                )
             )
             
             print(f"[AICoachAPI] Init response status: {response.status_code}")
@@ -92,7 +97,7 @@ class AICoachAPI:
             print(f"[AICoachAPI] Unexpected error initializing conversation: {str(e)}")
             return False
 
-    def send_message(self, message: str) -> Tuple[str, float, Dict[str, Any]]:
+    async def send_message(self, message: str) -> Tuple[str, float, Dict[str, Any]]:
         """Sends a message to the bot and returns the response."""
         if not self.current_conversation_id:
             return "No active conversation. Please initialize first.", 0, {}
@@ -114,12 +119,19 @@ class AICoachAPI:
             }
             
             start_time = time.time()
-            response = requests.post(
-                self.webhook_endpoint,
-                headers=headers,
-                json=payload,
-                timeout=self.timeout
+            
+            # Sử dụng asyncio để thực hiện yêu cầu HTTP không đồng bộ
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: requests.post(
+                    self.webhook_endpoint,
+                    headers=headers,
+                    json=payload,
+                    timeout=self.timeout
+                )
             )
+            
             end_time = time.time()
             response_time = end_time - start_time
             

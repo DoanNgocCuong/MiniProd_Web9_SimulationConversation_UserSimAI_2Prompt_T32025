@@ -134,8 +134,19 @@ async def simulate_conversation_with_api(
         # Initialize API client
         api_client = AICoachAPI(bot_id=bot_id, timeout=60)
         
-        # Quan trọng: Xử lý lỗi khởi tạo đúng cách
-        if not api_client.init_conversation():
+        # Thông báo cho người dùng biết đang khởi tạo cuộc hội thoại
+        status_message = {
+            "type": "status",
+            "conversation_id": conversation_id,
+            "message": f"Đang khởi tạo cuộc hội thoại với Bot ID: {bot_id}..."
+        }
+        if await manager.is_connected(client_id):
+            await manager.send_message(status_message, client_id)
+        
+        # Khởi tạo cuộc hội thoại với timeout dài hơn
+        init_success = await api_client.init_conversation()
+        
+        if not init_success:
             error_detail = getattr(api_client, 'last_error', '')
             error_message = {
                 "type": "error",
@@ -145,6 +156,15 @@ async def simulate_conversation_with_api(
             if await manager.is_connected(client_id):
                 await manager.send_message(error_message, client_id)
             return
+        
+        # Thông báo khởi tạo thành công
+        status_message = {
+            "type": "status",
+            "conversation_id": conversation_id,
+            "message": f"Đã khởi tạo cuộc hội thoại thành công với Bot ID: {bot_id}."
+        }
+        if await manager.is_connected(client_id):
+            await manager.send_message(status_message, client_id)
         
         # Initialize conversation history
         conversation_history = []
@@ -169,6 +189,15 @@ async def simulate_conversation_with_api(
         
         # Add to history
         conversation_history.append({"role": "User", "content": user_message})
+        
+        # Thông báo đang gửi tin nhắn đến API
+        status_message = {
+            "type": "status",
+            "conversation_id": conversation_id,
+            "message": "Đang chờ phản hồi từ bot..."
+        }
+        if await manager.is_connected(client_id):
+            await manager.send_message(status_message, client_id)
         
         # Send to API and get response
         agent_message, agent_time, full_response = await api_client.send_message(user_message)
@@ -232,6 +261,15 @@ async def simulate_conversation_with_api(
             conversation_history.append({"role": "User", "content": user_message})
             
             await asyncio.sleep(1)  # Add a small delay for realism
+            
+            # Thông báo đang gửi tin nhắn đến API
+            status_message = {
+                "type": "status",
+                "conversation_id": conversation_id,
+                "message": "Đang chờ phản hồi từ bot..."
+            }
+            if await manager.is_connected(client_id):
+                await manager.send_message(status_message, client_id)
             
             # Send to API and get response
             agent_message, agent_time, full_response = await api_client.send_message(user_message)
