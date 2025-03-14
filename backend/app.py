@@ -47,6 +47,7 @@ class SimulationTester:
         self.conversation_id = str(int(time.time() * 1001))
         self.bot_id = bot_id
         self.conversation_history = []
+        self.error_message = None  # Add this to track errors
     
     async def init_conversation(self):
         """Initialize conversation with the bot."""
@@ -85,8 +86,9 @@ class SimulationTester:
                 print(f"Status code: {response.status_code}")
                 
                 if response.status_code != 200:
-                    print(f"Error: HTTP {response.status_code}")
-                    print(f"Response: {response.text}")
+                    error_msg = f"Error: HTTP {response.status_code} - {response.text}"
+                    print(error_msg)
+                    self.error_message = error_msg
                     if attempt < max_retries - 1:
                         print(f"Retrying in {retry_delay} seconds...")
                         await asyncio.sleep(retry_delay)
@@ -95,23 +97,26 @@ class SimulationTester:
                 
                 data = response.json()
                 if data.get("status") != 0 or data.get("msg") != "Success":
-                    print(f"Error: API returned error: {data}")
+                    error_msg = f"API returned error: {data}"
+                    print(error_msg)
+                    self.error_message = error_msg
                     return False
                 
                 print(f"Conversation initialized successfully")
                 return True
                 
             except Exception as e:
-                print(f"Error on attempt {attempt+1}: {str(e)}")
+                error_msg = f"Error initializing conversation: {str(e)}"
+                print(error_msg)
+                self.error_message = error_msg
                 if attempt < max_retries - 1:
                     print(f"Retrying in {retry_delay} seconds...")
                     await asyncio.sleep(retry_delay)
                 else:
                     print(f"All {max_retries} attempts failed")
-                    # Trả về False thay vì raise exception để tránh crash
                     return False
     
-    # Tương tự, thêm retry logic cho send_message
+    # Update send_message similarly
     async def send_message(self, message):
         """Send a message to the bot."""
         print(f"\n===== Sending Message =====")
@@ -122,9 +127,8 @@ class SimulationTester:
             "message": message
         }
         
-        # Thêm retry logic và tăng timeout
         max_retries = 1
-        timeout_seconds = 3600  # Tăng timeout lên 100000 giây
+        timeout_seconds = 3600
         retry_delay = 1
         
         for attempt in range(max_retries):
@@ -137,7 +141,7 @@ class SimulationTester:
                     headers={'Content-Type': 'application/json'},
                     json=payload,
                     timeout=timeout_seconds,
-                    verify=False  # Thêm dòng này nếu có vấn đề về SSL
+                    verify=False
                 )
                 
                 elapsed_time = time.time() - start_time
@@ -146,8 +150,9 @@ class SimulationTester:
                 print(f"Status code: {response.status_code}")
                 
                 if response.status_code != 200:
-                    print(f"Error: HTTP {response.status_code}")
-                    print(f"Response: {response.text}")
+                    error_msg = f"Error: HTTP {response.status_code} - {response.text}"
+                    print(error_msg)
+                    self.error_message = error_msg
                     if attempt < max_retries - 1:
                         print(f"Retrying in {retry_delay} seconds...")
                         await asyncio.sleep(retry_delay)
@@ -169,11 +174,15 @@ class SimulationTester:
                     
                     return bot_response
                 else:
-                    print(f"Bot response: {text}")
+                    error_msg = f"Unexpected bot response format: {text}"
+                    print(error_msg)
+                    self.error_message = error_msg
                     return str(text)
                 
             except Exception as e:
-                print(f"Error on attempt {attempt+1}: {str(e)}")
+                error_msg = f"Error sending message: {str(e)}"
+                print(error_msg)
+                self.error_message = error_msg
                 if attempt < max_retries - 1:
                     print(f"Retrying in {retry_delay} seconds...")
                     await asyncio.sleep(retry_delay)
@@ -295,8 +304,8 @@ async def simulate(request: SimulationRequest):
         # Convert history format if needed
         conversation_history = []
         for msg in history:
-            role = "roleA" if msg["role"] == "user" else "roleB"
-            conversation_history.append({"role": role, "content": msg["content"]})
+            role = "roleA" if msg.get("role") == "user" else "roleB"
+            conversation_history.append({"role": role, "content": msg.get("content", "")})
         
         # Set conversation history
         tester.conversation_history = conversation_history
@@ -304,24 +313,27 @@ async def simulate(request: SimulationRequest):
         # Run simulation
         success = await tester.run_simulation(user_prompt, max_turns)
         
-        # Keep original roles in the API response
+        # Format the available conversation history
         formatted_history = []
+        simulation_conversation = []
+        
         for msg in tester.conversation_history:
             formatted_history.append({"role": msg["role"], "content": msg["content"]})
-        
-        # Format the simulation conversation
-        simulation_conversation = []
-        for i, msg in enumerate(tester.conversation_history):
+            
             role_name = "User" if msg["role"] == "roleA" else "Bot"
             simulation_conversation.append({
                 "role": role_name,
                 "content": msg["content"]
             })
         
+        # Use the error message from the tester if available
+        error_message = tester.error_message if not success else None
+        
         return SimulationResponse(
             success=success,
             conversation_history=formatted_history,
-            simulation_conversation=simulation_conversation
+            simulation_conversation=simulation_conversation,
+            error=error_message
         )
         
     except Exception as e:
