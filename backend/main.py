@@ -1,345 +1,128 @@
-import os
-import json
-import time
-import sys
 import asyncio
-import requests
-from typing import Optional, List
-from fastapi import FastAPI, HTTPException
+import socket
+import logging
+import time
+import traceback
+from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import AsyncOpenAI
-from dotenv import load_dotenv
+from typing import Optional, List, Dict, Any
+from def_simulation import run_simulation_with_params
 
-# Load environment variables from .env file
-load_dotenv()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("api.log")
+    ]
+)
+logger = logging.getLogger("simulation-api")
 
-# Get OpenAI API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    print("Error: OPENAI_API_KEY environment variable not set")
-    sys.exit(1)
+# Create FastAPI app
+app = FastAPI(title="Simulation API")
 
-# Initialize OpenAI client
-client = AsyncOpenAI(api_key=api_key)
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Initialize FastAPI app
-app = FastAPI(title="Bot Simulation API")
-
-# Define request model
-class SimulationRequest(BaseModel):
-    bot_id: int = 16
-    user_prompt: str = "sẵn sàng"
-    max_turns: int = 3
-    history: str = "[]"
-
-# Define response model
-class SimulationResponse(BaseModel):
-    success: bool
-    conversation_history: List[dict]
-    simulation_conversation: List[dict] = []
-    error: Optional[str] = None
-
-class SimulationTester:
-    def __init__(self, bot_id=16):
-        self.base_url = "http://103.253.20.13:9404"
-        self.init_endpoint = f"{self.base_url}/robot-ai-lesson/api/v1/bot/initConversation"
-        self.webhook_endpoint = f"{self.base_url}/robot-ai-lesson/api/v1/bot/webhook"
-        self.conversation_id = str(int(time.time() * 1001))
-        self.bot_id = bot_id
-        self.conversation_history = []
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    request_id = f"{time.time()}-{id(request)}"
+    logger.info(f"Request {request_id} started: {request.method} {request.url.path}")
     
-    async def init_conversation(self):
-        """Initialize conversation with the bot."""
-        print(f"\n===== Initializing Conversation =====")
-        print(f"Bot ID: {self.bot_id}")
-        print(f"Conversation ID: {self.conversation_id}")
-        
-        payload = {
-            "bot_id": self.bot_id,
-            "conversation_id": self.conversation_id,
-            "input_slots": {}
-        }
-        
-        try:
-            start_time = time.time()
-            response = requests.post(
-                self.init_endpoint,
-                headers={'Content-Type': 'application/json'},
-                json=payload,
-                timeout=10
-            )
-            elapsed_time = time.time() - start_time
-            
-            print(f"Response received in {elapsed_time:.2f} seconds")
-            print(f"Status code: {response.status_code}")
-            
-            if response.status_code != 200:
-                print(f"Error: HTTP {response.status_code}")
-                print(f"Response: {response.text}")
-                return False
-            
-            data = response.json()
-            if data.get("status") != 0 or data.get("msg") != "Success":
-                print(f"Error: API returned error: {data}")
-                return False
-            
-            print(f"Conversation initialized successfully")
-            return True
-            
-        except Exception as e:
-            print(f"Error initializing conversation: {str(e)}")
-            return False
-    
-    async def send_message(self, message):
-        """Send a message to the bot."""
-        print(f"\n===== Sending Message =====")
-        print(f"Message: {message}")
-        
-        payload = {
-            "conversation_id": self.conversation_id,
-            "message": message
-        }
-        
-        try:
-            start_time = time.time()
-            response = requests.post(
-                self.webhook_endpoint,
-                headers={'Content-Type': 'application/json'},
-                json=payload,
-                timeout=10
-            )
-            elapsed_time = time.time() - start_time
-            
-            print(f"Response received in {elapsed_time:.2f} seconds")
-            print(f"Status code: {response.status_code}")
-            
-            if response.status_code != 200:
-                print(f"Error: HTTP {response.status_code}")
-                print(f"Response: {response.text}")
-                return None
-            
-            data = response.json()
-            status = data.get("status")
-            text = data.get("text", [])
-            
-            print(f"Status: {status}")
-            if isinstance(text, list) and len(text) > 0:
-                bot_response = text[0]
-                print(f"Bot response: {bot_response[:100]}...")
-                
-                # Add to conversation history only if not duplicate
-                if not self.conversation_history or (
-                    message != self.conversation_history[-2]["content"] if len(self.conversation_history) >= 2 else True
-                ):
-                    self.conversation_history.append({"role": "roleA", "content": message})
-                    self.conversation_history.append({"role": "roleB", "content": bot_response})
-                
-                return bot_response
-            else:
-                print(f"Bot response: {text}")
-                return str(text)
-            
-        except Exception as e:
-            print(f"Error sending message: {str(e)}")
-            return None
-    
-    async def generate_user_response(self, bot_message):
-        """Generate a user response using OpenAI."""
-        print(f"\n===== Generating User Response =====")
-        
-        # Prepare the prompt for OpenAI
-        system_prompt = """
-        You are a helpful assistant that generates the next user message in a conversation.
-        The user is learning English from a bot. Generate a natural, brief response that continues the conversation.
-        Your response should be in Vietnamese and should be a single message without any explanation or additional text.
-        """
-        
-        # Format conversation history for the prompt
-        formatted_history = []
-        for msg in self.conversation_history:
-            role = "user" if msg["role"] == "roleA" else "assistant"
-            formatted_history.append({"role": role, "content": msg["content"]})
-        
-        # Add system message at the beginning
-        messages = [{"role": "system", "content": system_prompt}] + formatted_history
-        
-        try:
-            start_time = time.time()
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                max_tokens=100,
-                temperature=0.7
-            )
-            elapsed_time = time.time() - start_time
-            
-            user_message = response.choices[0].message.content.strip()
-            print(f"Generated in {elapsed_time:.2f} seconds: {user_message}")
-            return user_message
-        except Exception as e:
-            print(f"Error generating user response: {str(e)}")
-            return "Tôi không hiểu. Bạn có thể giải thích rõ hơn không?"
-    
-    async def run_simulation(self, initial_message="sẵn sàng", turns=3):
-        """Run a full simulation."""
-        print(f"\n===== Starting Simulation =====")
-        print(f"Initial message: {initial_message}")
-        print(f"Number of turns: {turns}")
-        
-        # Initialize conversation
-        if not await self.init_conversation():
-            print("Failed to initialize conversation")
-            return False
-        
-        # Send initial message
-        bot_response = await self.send_message(initial_message)
-        if not bot_response:
-            print("Failed to get initial bot response")
-            return False
-        
-        # Run conversation turns
-        for i in range(1, turns):
-            print(f"\n----- Turn {i}/{turns-1} -----")
-            
-            # Generate user response
-            user_message = await self.generate_user_response(bot_response)
-            
-            # Send user message to bot
-            bot_response = await self.send_message(user_message)
-            if not bot_response:
-                print(f"Failed to get bot response in turn {i}")
-                return False
-        
-        print("\n===== Simulation Completed =====")
-        print(f"Total messages: {len(self.conversation_history)}")
-        
-        # Print conversation summary
-        print("\n===== Conversation Summary =====")
-        for i, msg in enumerate(self.conversation_history):
-            role_name = "User" if msg["role"] == "roleA" else "Bot"
-            content = msg["content"]
-            if len(content) > 100:
-                content = content[:100] + "..."
-            print(f"{i+1}. {role_name}: {content}")
-        
-        return True
-
-async def main():
-    """Main function to run the test."""
-    # Parse command line arguments
-    initial_message = "sẵn sàng"
-    turns = 3
-    
-    if len(sys.argv) > 1:
-        initial_message = sys.argv[1]
-    if len(sys.argv) > 2:
-        try:
-            turns = int(sys.argv[2])
-        except ValueError:
-            print("Error: Number of turns must be an integer")
-            return
-    
-    # Run the simulation
-    tester = SimulationTester()
-    success = await tester.run_simulation(initial_message, turns)
-    
-    if success:
-        print("\nSimulation completed successfully!")
-    else:
-        print("\nSimulation failed!")
-
-# Add this health check endpoint
-@app.get("/healthy")
-async def health_check():
-    return {"status": "ok"}
-
-@app.post("/simulate", response_model=SimulationResponse)
-async def simulate(request: SimulationRequest):
-    """API endpoint to run a simulation"""
+    start_time = time.time()
     try:
-        # Extract parameters from request
-        bot_id = request.bot_id
-        user_prompt = request.user_prompt
-        max_turns = request.max_turns
-        history_json = request.history
-        
-        # Parse history from JSON string
-        try:
-            history = json.loads(history_json)
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid history JSON: {str(e)}")
-        
-        # Initialize tester with specified bot_id
-        tester = SimulationTester(bot_id)
-        
-        # Convert history format if needed
-        conversation_history = []
-        for msg in history:
-            role = "roleA" if msg["role"] == "user" else "roleB"
-            conversation_history.append({"role": role, "content": msg["content"]})
-        
-        # Set conversation history
-        tester.conversation_history = conversation_history
-        
-        # Run simulation
-        success = await tester.run_simulation(user_prompt, max_turns)
-        
-        # Keep original roles in the API response
-        formatted_history = []
-        for msg in tester.conversation_history:
-            formatted_history.append({"role": msg["role"], "content": msg["content"]})
-        
-        # Format the simulation conversation
-        simulation_conversation = []
-        for i, msg in enumerate(tester.conversation_history):
-            role_name = "User" if msg["role"] == "roleA" else "Bot"
-            simulation_conversation.append({
-                "role": role_name,
-                "content": msg["content"]
-            })
-        
-        return SimulationResponse(
-            success=success,
-            conversation_history=formatted_history,
-            simulation_conversation=simulation_conversation
-        )
-        
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        logger.info(f"Request {request_id} completed: status={response.status_code}, time={process_time:.3f}s")
+        return response
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error in simulation: {error_details}")
-        
-        # Still return any available conversation history
-        formatted_history = []
-        simulation_conversation = []
-        
-        if 'tester' in locals() and hasattr(tester, 'conversation_history'):
-            for msg in tester.conversation_history:
-                formatted_history.append({"role": msg["role"], "content": msg["content"]})
-                
-                role_name = "User" if msg["role"] == "roleA" else "Bot"
-                simulation_conversation.append({
-                    "role": role_name,
-                    "content": msg["content"]
-                })
-        
-        return SimulationResponse(
-            success=False,
-            conversation_history=formatted_history,
-            simulation_conversation=simulation_conversation,
-            error=str(e)
+        logger.error(f"Request {request_id} failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
+
+# Define request models
+class SimulationRequest(BaseModel):
+    bot_id: int
+    user_prompt: str
+    max_turns: int = 3
+    history: Optional[List[Dict[str, Any]]] = None
+
+# Define API endpoints
+@app.post("/run-simulation")
+async def api_run_simulation(request: SimulationRequest):
+    logger.info(f"Starting simulation with bot_id={request.bot_id}, prompt='{request.user_prompt}'")
+    print("api_run_simulation")
+    try:
+        start_time = time.time()
+        result = await run_simulation_with_params(
+            bot_id=request.bot_id,
+            user_prompt=request.user_prompt,
+            max_turns=request.max_turns,
+            history=request.history
         )
+        elapsed_time = time.time() - start_time
+        logger.info(f"Simulation completed in {elapsed_time:.3f}s")
+        return result
+    except Exception as e:
+        logger.error(f"Simulation failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Thêm route để xử lý yêu cầu WebSocket
-@app.get("/ws/{client_id}")
-async def websocket_endpoint(client_id: str):
-    """Handle WebSocket connection requests with a proper HTTP response."""
-    return {
-        "status": "error",
-        "message": "WebSocket connections are not supported by this server. Please use HTTP endpoints instead.",
-        "client_id": client_id
-    }
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    logger.info("Health check requested")
+    return {"status": "healthy", "service": "simulation-api", "timestamp": time.time()}
 
+# Keep the test function for debugging
+async def test_simulation():
+    logger.info("Running test simulation")
+    print("test_simulation")
+    # Test the run_simulation_with_params function with custom parameters
+    try:
+        result = await run_simulation_with_params(
+            bot_id=16,
+            user_prompt="xin chào",
+            max_turns=3,
+            history=None
+        )
+        
+        # Print results
+        print(result)
+        logger.info("Test simulation completed successfully")
+    except Exception as e:
+        logger.error(f"Test simulation failed: {str(e)}")
+        logger.error(traceback.format_exc())
+
+# Function to find an available port
+def find_available_port(start_port=25050, max_attempts=100):
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return port
+    return start_port  # Fallback to original port if none found
+
+# Run the app with uvicorn when executed directly
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    try:
+        import uvicorn
+        # Find an available port
+        port = find_available_port()
+        logger.info(f"Starting server on port {port}")
+        print(f"Starting server on port {port}")
+        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    except ModuleNotFoundError as e:
+        error_msg = f"Error: {e}"
+        logger.error(error_msg)
+        print(error_msg)
+        print("Please install required dependencies:")
+        print("pip install fastapi uvicorn typing-extensions")
