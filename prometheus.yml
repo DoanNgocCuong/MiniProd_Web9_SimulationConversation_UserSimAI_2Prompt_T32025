@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "websim-backend"
+    static_configs:
+      - targets: ["websim-backend:25050"]
+    metrics_path: /metrics 

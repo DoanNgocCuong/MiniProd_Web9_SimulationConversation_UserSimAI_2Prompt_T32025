@@ -24,7 +24,7 @@ class SimulationTester:
         self.base_url = "http://103.253.20.13:9404"
         self.init_endpoint = f"{self.base_url}/robot-ai-lesson/api/v1/bot/initConversation"
         self.webhook_endpoint = f"{self.base_url}/robot-ai-lesson/api/v1/bot/webhook"
-        self.conversation_id = str(int(time.time() * 1000))
+        self.conversation_id = str(int(time.time() * 1001))
         self.bot_id = 16
         self.conversation_history = []
     

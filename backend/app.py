@@ -60,36 +60,58 @@ class SimulationTester:
             "input_slots": {}
         }
         
-        try:
-            start_time = time.time()
-            response = requests.post(
-                self.init_endpoint,
-                headers={'Content-Type': 'application/json'},
-                json=payload,
-                timeout=10
-            )
-            elapsed_time = time.time() - start_time
-            
-            print(f"Response received in {elapsed_time:.2f} seconds")
-            print(f"Status code: {response.status_code}")
-            
-            if response.status_code != 200:
-                print(f"Error: HTTP {response.status_code}")
-                print(f"Response: {response.text}")
-                return False
-            
-            data = response.json()
-            if data.get("status") != 0 or data.get("msg") != "Success":
-                print(f"Error: API returned error: {data}")
-                return False
-            
-            print(f"Conversation initialized successfully")
-            return True
-            
-        except Exception as e:
-            print(f"Error initializing conversation: {str(e)}")
-            return False
+        # Thêm retry logic và tăng timeout
+        max_retries = 1
+        timeout_seconds = 3600  # Tăng timeout lên 100000 giây
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"Connection attempt {attempt+1}/{max_retries}...")
+                start_time = time.time()
+                
+                # Thêm verify=False để bỏ qua SSL verification nếu cần
+                response = requests.post(
+                    self.init_endpoint,
+                    headers={'Content-Type': 'application/json'},
+                    json=payload,
+                    timeout=timeout_seconds,
+                    verify=False  # Thêm dòng này nếu có vấn đề về SSL
+                )
+                
+                elapsed_time = time.time() - start_time
+                
+                print(f"Response received in {elapsed_time:.2f} seconds")
+                print(f"Status code: {response.status_code}")
+                
+                if response.status_code != 200:
+                    print(f"Error: HTTP {response.status_code}")
+                    print(f"Response: {response.text}")
+                    if attempt < max_retries - 1:
+                        print(f"Retrying in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    return False
+                
+                data = response.json()
+                if data.get("status") != 0 or data.get("msg") != "Success":
+                    print(f"Error: API returned error: {data}")
+                    return False
+                
+                print(f"Conversation initialized successfully")
+                return True
+                
+            except Exception as e:
+                print(f"Error on attempt {attempt+1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    print(f"Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                else:
+                    print(f"All {max_retries} attempts failed")
+                    # Trả về False thay vì raise exception để tránh crash
+                    return False
     
+    # Tương tự, thêm retry logic cho send_message
     async def send_message(self, message):
         """Send a message to the bot."""
         print(f"\n===== Sending Message =====")
@@ -100,48 +122,64 @@ class SimulationTester:
             "message": message
         }
         
-        try:
-            start_time = time.time()
-            response = requests.post(
-                self.webhook_endpoint,
-                headers={'Content-Type': 'application/json'},
-                json=payload,
-                timeout=10
-            )
-            elapsed_time = time.time() - start_time
-            
-            print(f"Response received in {elapsed_time:.2f} seconds")
-            print(f"Status code: {response.status_code}")
-            
-            if response.status_code != 200:
-                print(f"Error: HTTP {response.status_code}")
-                print(f"Response: {response.text}")
-                return None
-            
-            data = response.json()
-            status = data.get("status")
-            text = data.get("text", [])
-            
-            print(f"Status: {status}")
-            if isinstance(text, list) and len(text) > 0:
-                bot_response = text[0]
-                print(f"Bot response: {bot_response[:100]}...")
+        # Thêm retry logic và tăng timeout
+        max_retries = 1
+        timeout_seconds = 3600  # Tăng timeout lên 100000 giây
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"Send attempt {attempt+1}/{max_retries}...")
+                start_time = time.time()
                 
-                # Add to conversation history only if not duplicate
-                if not self.conversation_history or (
-                    message != self.conversation_history[-2]["content"] if len(self.conversation_history) >= 2 else True
-                ):
+                response = requests.post(
+                    self.webhook_endpoint,
+                    headers={'Content-Type': 'application/json'},
+                    json=payload,
+                    timeout=timeout_seconds,
+                    verify=False  # Thêm dòng này nếu có vấn đề về SSL
+                )
+                
+                elapsed_time = time.time() - start_time
+                
+                print(f"Response received in {elapsed_time:.2f} seconds")
+                print(f"Status code: {response.status_code}")
+                
+                if response.status_code != 200:
+                    print(f"Error: HTTP {response.status_code}")
+                    print(f"Response: {response.text}")
+                    if attempt < max_retries - 1:
+                        print(f"Retrying in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    return None
+                
+                data = response.json()
+                status = data.get("status")
+                text = data.get("text", [])
+                
+                print(f"Status: {status}")
+                if isinstance(text, list) and len(text) > 0:
+                    bot_response = text[0]
+                    print(f"Bot response: {bot_response[:100]}...")
+                    
+                    # Add to conversation history
                     self.conversation_history.append({"role": "roleA", "content": message})
                     self.conversation_history.append({"role": "roleB", "content": bot_response})
+                    
+                    return bot_response
+                else:
+                    print(f"Bot response: {text}")
+                    return str(text)
                 
-                return bot_response
-            else:
-                print(f"Bot response: {text}")
-                return str(text)
-            
-        except Exception as e:
-            print(f"Error sending message: {str(e)}")
-            return None
+            except Exception as e:
+                print(f"Error on attempt {attempt+1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    print(f"Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                else:
+                    print(f"All {max_retries} attempts failed")
+                    return None
     
     async def generate_user_response(self, bot_message):
         """Generate a user response using OpenAI."""
@@ -197,6 +235,12 @@ class SimulationTester:
             print("Failed to get initial bot response")
             return False
         
+        # Add initial message to conversation history if it's not already there
+        if not any(msg["role"] == "roleA" and msg["content"] == initial_message for msg in self.conversation_history):
+            self.conversation_history.insert(0, {"role": "roleA", "content": initial_message})
+            if bot_response:
+                self.conversation_history.insert(1, {"role": "roleB", "content": bot_response})
+        
         # Run conversation turns
         for i in range(1, turns):
             print(f"\n----- Turn {i}/{turns-1} -----")
@@ -224,30 +268,6 @@ class SimulationTester:
         
         return True
 
-async def main():
-    """Main function to run the test."""
-    # Parse command line arguments
-    initial_message = "sẵn sàng"
-    turns = 3
-    
-    if len(sys.argv) > 1:
-        initial_message = sys.argv[1]
-    if len(sys.argv) > 2:
-        try:
-            turns = int(sys.argv[2])
-        except ValueError:
-            print("Error: Number of turns must be an integer")
-            return
-    
-    # Run the simulation
-    tester = SimulationTester()
-    success = await tester.run_simulation(initial_message, turns)
-    
-    if success:
-        print("\nSimulation completed successfully!")
-    else:
-        print("\nSimulation failed!")
-
 # Add this health check endpoint
 @app.get("/healthy")
 async def health_check():
@@ -270,7 +290,7 @@ async def simulate(request: SimulationRequest):
             raise HTTPException(status_code=400, detail=f"Invalid history JSON: {str(e)}")
         
         # Initialize tester with specified bot_id
-        tester = SimulationTester(bot_id)
+        tester = SimulationTester(bot_id=bot_id)
         
         # Convert history format if needed
         conversation_history = []
@@ -330,16 +350,6 @@ async def simulate(request: SimulationRequest):
             error=str(e)
         )
 
-# Thêm route để xử lý yêu cầu WebSocket
-@app.get("/ws/{client_id}")
-async def websocket_endpoint(client_id: str):
-    """Handle WebSocket connection requests with a proper HTTP response."""
-    return {
-        "status": "error",
-        "message": "WebSocket connections are not supported by this server. Please use HTTP endpoints instead.",
-        "client_id": client_id
-    }
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=25050) 
