@@ -7,11 +7,15 @@ services:
     image: backend-web-simulation-conv-doanngoccuong:latest
     ports:
       - "25050:25050"
-    command: uvicorn main:app --host 0.0.0.0 --port 25050 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 25050
     restart: unless-stopped
     container_name: websim-backend
     environment:
       - CORS_ORIGINS=http://localhost:25051,http://frontend:80,http://103.253.20.13:25051
+      - DOCKER=true
+      - ENVIRONMENT=production
+    volumes:
+      - websim_logs:/app/logs
 
   frontend:
     build:
@@ -26,9 +30,12 @@ services:
     environment:
       - VITE_BACKEND_URL=ws://103.253.20.13:25050
 
+volumes:
+  websim_logs:
+
 networks:
   default:
-    name: web-simulation-conv-doanngoccuong 
+    name: web-simulation-conv-doanngoccuong
 
 
 

@@ -3,30 +3,67 @@ import socket
 import logging
 import time
 import traceback
+import os
+import sys
 from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from def_simulation import run_simulation_with_params
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("api.log")
-    ]
-)
+# Configure logging with fallback to console if file logging fails
+try:
+    # Configure logging
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "api.log")
+    
+    # Try to create a test file to check permissions
+    try:
+        with open(log_file, 'a') as f:
+            pass
+        
+        # If we can write to the file, set up both handlers
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler(log_file)
+            ]
+        )
+    except PermissionError:
+        # If we can't write to the file, only use console logging only.
+        print(f"WARNING: Cannot write to log file {log_file}. Using console logging only.")
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler()
+            ]
+        )
+except Exception as e:
+    # Fallback to basic logging if anything goes wrong
+    print(f"Error setting up logging: {str(e)}")
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
 logger = logging.getLogger("simulation-api")
+logger.info("Logging initialized")
 
 # Create FastAPI app
 app = FastAPI(title="Simulation API")
 
+# Get CORS origins from environment or use default
+cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+logger.info(f"CORS origins: {cors_origins}")
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,7 +118,13 @@ async def api_run_simulation(request: SimulationRequest):
 @app.get("/health")
 async def health_check():
     logger.info("Health check requested")
-    return {"status": "healthy", "service": "simulation-api", "timestamp": time.time()}
+    return {
+        "status": "healthy", 
+        "service": "simulation-api", 
+        "timestamp": time.time(),
+        "environment": os.environ.get("ENVIRONMENT", "production"),
+        "python_version": sys.version
+    }
 
 # Keep the test function for debugging
 async def test_simulation():
@@ -103,26 +146,38 @@ async def test_simulation():
         logger.error(f"Test simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
 
-# Function to find an available port
-def find_available_port(start_port=25050, max_attempts=100):
-    for port in range(start_port, start_port + max_attempts):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', port)) != 0:
-                return port
-    return start_port  # Fallback to original port if none found
-
-# Run the app with uvicorn when executed directly
+# In Docker, we don't need to find an available port
+# The port is fixed in the Dockerfile and docker-compose.yml
 if __name__ == "__main__":
-    try:
+    # Check if running in Docker
+    in_docker = os.environ.get("DOCKER", False)
+    
+    if in_docker:
+        # Docker setup - port is fixed
+        logger.info("Running in Docker environment")
         import uvicorn
-        # Find an available port
-        port = find_available_port()
-        logger.info(f"Starting server on port {port}")
-        print(f"Starting server on port {port}")
-        uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
-    except ModuleNotFoundError as e:
-        error_msg = f"Error: {e}"
-        logger.error(error_msg)
-        print(error_msg)
-        print("Please install required dependencies:")
-        print("pip install fastapi uvicorn typing-extensions")
+        uvicorn.run("main:app", host="0.0.0.0", port=25050)
+    else:
+        # Local development setup - find available port
+        try:
+            import uvicorn
+            
+            # Function to find an available port
+            def find_available_port(start_port=25050, max_attempts=100):
+                for port in range(start_port, start_port + max_attempts):
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        if s.connect_ex(('localhost', port)) != 0:
+                            return port
+                return start_port  # Fallback to original port if none found
+            
+            # Find an available port
+            port = find_available_port()
+            logger.info(f"Starting server on port {port}")
+            print(f"Starting server on port {port}")
+            uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+        except ModuleNotFoundError as e:
+            error_msg = f"Error: {e}"
+            logger.error(error_msg)
+            print(error_msg)
+            print("Please install required dependencies:")
+            print("pip install fastapi uvicorn typing-extensions")
