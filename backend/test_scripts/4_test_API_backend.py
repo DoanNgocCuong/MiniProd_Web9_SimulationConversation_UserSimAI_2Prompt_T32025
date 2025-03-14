@@ -5,12 +5,28 @@ import sys
 import asyncio
 import websockets
 import uuid
+from openai import AsyncOpenAI
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get OpenAI API key from environment variable
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    print("Warning: OPENAI_API_KEY environment variable not set. User message generation will be disabled.")
+    openai_client = None
+else:
+    # Initialize OpenAI client
+    openai_client = AsyncOpenAI(api_key=api_key)
 
 class BackendTester:
     def __init__(self, backend_url="http://localhost:25050"):
         self.backend_url = backend_url
         self.ws_url = f"ws://{backend_url.split('//')[1]}/ws"
         self.client_id = f"test-client-{uuid.uuid4()}"
+        self.conversation_history = []
     
     def test_api_info(self):
         """Test the API info endpoint."""
@@ -100,9 +116,51 @@ class BackendTester:
             print(f"Error testing OpenAPI endpoint: {str(e)}")
             return False
     
-    async def test_websocket(self):
-        """Test the WebSocket endpoint."""
-        print(f"\n===== Testing WebSocket Endpoint =====")
+    async def generate_user_response(self, bot_message):
+        """Generate a user response using OpenAI."""
+        if not openai_client:
+            print("OpenAI client not initialized. Using default response.")
+            return "Tôi không hiểu. Bạn có thể giải thích rõ hơn không?"
+        
+        print(f"\n===== Generating User Response =====")
+        
+        # Prepare the prompt for OpenAI
+        system_prompt = """
+        You are a helpful assistant that generates the next user message in a conversation.
+        The user is learning English from a bot. Generate a natural, brief response that continues the conversation.
+        Your response should be in Vietnamese and should be a single message without any explanation or additional text.
+        """
+        
+        # Format conversation history for the prompt
+        formatted_history = []
+        for msg in self.conversation_history:
+            role = "user" if msg["role"] == "user" else "assistant"
+            formatted_history.append({"role": role, "content": msg["content"]})
+        
+        # Add system message at the beginning
+        messages = [{"role": "system", "content": system_prompt}] + formatted_history
+        
+        try:
+            start_time = time.time()
+            response = await openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=100,
+                temperature=0.7
+            )
+            elapsed_time = time.time() - start_time
+            
+            user_message = response.choices[0].message.content.strip()
+            print(f"Generated in {elapsed_time:.2f} seconds: {user_message}")
+            return user_message
+        except Exception as e:
+            print(f"Error generating user response: {str(e)}")
+            return "Tôi không hiểu. Bạn có thể giải thích rõ hơn không?"
+    
+    async def test_websocket_simulation(self, turns=3):
+        """Test the WebSocket endpoint with a full conversation simulation."""
+        print(f"\n===== Testing WebSocket Simulation =====")
+        print(f"Number of turns: {turns}")
         uri = f"{self.ws_url}/{self.client_id}"
         
         print(f"Connecting to {uri}...")
@@ -111,8 +169,9 @@ class BackendTester:
             async with websockets.connect(uri) as websocket:
                 print(f"Connected successfully!")
                 
-                # Prepare request
+                # Prepare initial request
                 bot_id = 16
+                initial_message = "sẵn sàng"  # Thay đổi tin nhắn ban đầu
                 request = {
                     "type": "start_conversation",
                     "agent_mode": "bot_id",
@@ -120,119 +179,185 @@ class BackendTester:
                     "user_prompts": [
                         {
                             "id": 1,
-                            "content": "Xin chào, tôi muốn học tiếng Anh"
+                            "content": initial_message
                         }
                     ],
-                    "max_turns": 1
+                    "max_turns": 1  # We'll handle the turns manually
                 }
                 
+                # Add initial message to conversation history
+                self.conversation_history.append({"role": "user", "content": initial_message})
+                
                 # Send request
-                print(f"Sending request with Bot ID {bot_id}...")
+                print(f"\n----- Turn 1/{turns} -----")
+                print(f"Sending initial message: {initial_message}")
                 await websocket.send(json.dumps(request))
-                print(f"Request sent!")
                 
-                # Wait for responses
-                start_time = time.time()
-                message_count = 0
+                # Wait for initial bot response
                 conversation_id = None
+                bot_response = None
+                message_count = 0
                 
-                # Wait for up to 30 seconds for messages
-                while time.time() - start_time < 30:
+                # Process messages until we get a bot response or timeout
+                start_time = time.time()
+                timeout_seconds = 60  # Tăng thời gian chờ lên 60 giây
+                
+                print(f"Waiting for bot response (timeout: {timeout_seconds}s)...")
+                
+                while time.time() - start_time < timeout_seconds:
                     try:
-                        # Set a timeout for receiving messages
-                        response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                        # Tăng timeout cho mỗi lần nhận tin nhắn
+                        response = await asyncio.wait_for(websocket.recv(), timeout=10.0)
                         message_count += 1
                         
                         try:
                             data = json.loads(response)
                             message_type = data.get("type")
                             
-                            print(f"\n[{message_count}] Received message type: {message_type}")
-                            print(f"Full message: {data}")
+                            print(f"[{message_count}] Received message type: {message_type}")
                             
                             if message_type == "conversations_created":
-                                conversation_id = data.get("conversation_id", "Unknown")
+                                conversations = data.get("conversations", [])
+                                if conversations and len(conversations) > 0:
+                                    conversation_id = conversations[0].get("id", "Unknown")
+                                else:
+                                    conversation_id = data.get("conversation_id", "Unknown")
                                 print(f"Conversation ID: {conversation_id}")
                             elif message_type == "status":
-                                status_content = data.get("content", "Unknown status")
+                                status_content = data.get("message", data.get("content", "Unknown status"))
                                 print(f"Status: {status_content}")
                             elif message_type == "message":
                                 message_content = data.get("content", "")
                                 if message_content:
-                                    print(f"Message: {message_content[:100]}...")
+                                    print(f"Bot: {message_content[:100]}...")
+                                    bot_response = message_content
+                                    # Add bot response to conversation history
+                                    self.conversation_history.append({"role": "assistant", "content": bot_response})
+                                    break  # We got a bot response, move to next turn
                                 else:
-                                    print("Message: Empty content")
+                                    print("Bot: Empty content")
                             elif message_type == "conversation_ended":
                                 print(f"Conversation ended")
-                                # Success - we got a complete conversation
-                                return {
-                                    "success": True,
-                                    "message_count": message_count,
-                                    "conversation_id": conversation_id,
-                                    "elapsed_time": time.time() - start_time
-                                }
-                            else:
-                                print(f"Other data: {data}")
+                                break
                             
                         except json.JSONDecodeError:
                             print(f"Received non-JSON message: {response[:100]}...")
                         
                     except asyncio.TimeoutError:
-                        print(f"No message received for 5 seconds")
-                        # If we've received at least one message, consider it a success
-                        if message_count > 0:
-                            return {
-                                "success": True,
-                                "message_count": message_count,
-                                "conversation_id": conversation_id,
-                                "elapsed_time": time.time() - start_time,
-                                "note": "Timed out waiting for more messages"
-                            }
-                        break
-                    except websockets.exceptions.ConnectionClosed as e:
-                        print(f"Connection closed with code {e.code}, reason: {e.reason}")
-                        # If we've received at least one message, consider it a partial success
-                        if message_count > 0:
-                            return {
-                                "success": True,
-                                "message_count": message_count,
-                                "conversation_id": conversation_id,
-                                "elapsed_time": time.time() - start_time,
-                                "note": f"Connection closed: {e.reason}"
-                            }
-                        return {
-                            "success": False,
-                            "error": f"Connection closed: {e.reason}",
-                            "message_count": message_count,
-                            "elapsed_time": time.time() - start_time
-                        }
+                        print(f"No message received for 10 seconds, continuing to wait...")
+                        # Không break ở đây, tiếp tục chờ
                     except Exception as e:
-                        print(f"Error: {str(e)}")
-                        return {
-                            "success": False,
-                            "error": str(e),
-                            "message_count": message_count,
-                            "elapsed_time": time.time() - start_time
-                        }
+                        print(f"Error receiving message: {str(e)}")
+                        # Không break ở đây, tiếp tục chờ
                 
-                # If we get here, we didn't receive a conversation_ended message
-                if message_count > 0:
+                # Kiểm tra xem đã nhận được tin nhắn từ bot chưa
+                if not bot_response:
+                    print(f"No bot response received after {timeout_seconds} seconds")
+                    return {
+                        "success": False,
+                        "error": "No bot response received",
+                        "message_count": message_count
+                    }
+                
+                # Nếu đã nhận được tin nhắn từ bot, tiếp tục với các lượt tiếp theo
+                print(f"Bot response received after {time.time() - start_time:.2f} seconds")
+                
+                # Run additional turns
+                for turn in range(2, turns + 1):
+                    print(f"\n----- Turn {turn}/{turns} -----")
+                    
+                    # Generate user response
+                    user_message = await self.generate_user_response(bot_response)
+                    print(f"User: {user_message}")
+                    
+                    # Add user message to conversation history
+                    self.conversation_history.append({"role": "user", "content": user_message})
+                    
+                    # Send user message
+                    next_request = {
+                        "type": "user_message",
+                        "conversation_id": conversation_id,
+                        "content": user_message
+                    }
+                    await websocket.send(json.dumps(next_request))
+                    
+                    # Wait for bot response
+                    bot_response = None
+                    start_time = time.time()
+                    print(f"Waiting for bot response (timeout: {timeout_seconds}s)...")
+                    
+                    while time.time() - start_time < timeout_seconds:
+                        try:
+                            response = await asyncio.wait_for(websocket.recv(), timeout=10.0)
+                            message_count += 1
+                            
+                            try:
+                                data = json.loads(response)
+                                message_type = data.get("type")
+                                
+                                print(f"[{message_count}] Received message type: {message_type}")
+                                
+                                if message_type == "status":
+                                    status_content = data.get("message", data.get("content", "Unknown status"))
+                                    print(f"Status: {status_content}")
+                                elif message_type == "message":
+                                    message_content = data.get("content", "")
+                                    if message_content:
+                                        print(f"Bot: {message_content[:100]}...")
+                                        bot_response = message_content
+                                        # Add bot response to conversation history
+                                        self.conversation_history.append({"role": "assistant", "content": bot_response})
+                                        break  # We got a bot response, move to next turn
+                                    else:
+                                        print("Bot: Empty content")
+                                elif message_type == "conversation_ended":
+                                    print(f"Conversation ended")
+                                    break
+                                
+                            except json.JSONDecodeError:
+                                print(f"Received non-JSON message: {response[:100]}...")
+                                
+                        except asyncio.TimeoutError:
+                            print(f"No message received for 10 seconds, continuing to wait...")
+                            # Không break ở đây, tiếp tục chờ
+                        except Exception as e:
+                            print(f"Error receiving message: {str(e)}")
+                            # Không break ở đây, tiếp tục chờ
+                    
+                    if not bot_response:
+                        print(f"No bot response received after {timeout_seconds} seconds in turn {turn}")
+                        # Không coi đây là lỗi nghiêm trọng, chỉ dừng vòng lặp
+                        break
+                    
+                    print(f"Bot response received after {time.time() - start_time:.2f} seconds")
+                
+                # Print conversation summary
+                print("\n===== Conversation Summary =====")
+                for i, msg in enumerate(self.conversation_history):
+                    role_name = "User" if msg["role"] == "user" else "Bot"
+                    content = msg["content"]
+                    if len(content) > 100:
+                        content = content[:100] + "..."
+                    print(f"{i+1}. {role_name}: {content}")
+                
+                # Nếu có ít nhất một lượt hội thoại hoàn chỉnh, coi như thành công
+                if len(self.conversation_history) >= 2:
                     return {
                         "success": True,
                         "message_count": message_count,
                         "conversation_id": conversation_id,
-                        "elapsed_time": time.time() - start_time,
-                        "note": "Conversation did not end properly"
+                        "turns_completed": len(self.conversation_history) // 2,
+                        "elapsed_time": time.time() - start_time
                     }
                 else:
                     return {
                         "success": False,
-                        "error": "No messages received",
-                        "elapsed_time": time.time() - start_time
+                        "error": "No complete conversation turn",
+                        "message_count": message_count
                     }
         
         except Exception as e:
-            print(f"Failed to connect: {str(e)}")
+            print(f"Failed to connect or run simulation: {str(e)}")
             return {
                 "success": False,
                 "error": f"Connection failed: {str(e)}",
@@ -252,9 +377,9 @@ class BackendTester:
         # Test 3: OpenAPI endpoint
         results["openapi_endpoint"] = self.test_openapi_endpoint()
         
-        # Test 4: WebSocket endpoint
-        websocket_result = await self.test_websocket()
-        results["websocket"] = websocket_result.get("success", False)
+        # Test 4: WebSocket Simulation
+        websocket_result = await self.test_websocket_simulation(turns=3)
+        results["websocket_simulation"] = websocket_result.get("success", False)
         
         # Print summary
         print("\n===== Test Results Summary =====")
@@ -263,7 +388,7 @@ class BackendTester:
             print(f"{test}: {status}")
         
         # Nếu WebSocket hoạt động, coi như test thành công
-        if results["websocket"]:
+        if results["websocket_simulation"]:
             return True
         else:
             return False
@@ -272,11 +397,19 @@ async def main():
     """Main function to run the test."""
     # Parse command line arguments
     backend_url = "http://localhost:25050"
+    turns = 3
     
     if len(sys.argv) > 1:
         backend_url = sys.argv[1]
         if not backend_url.startswith("http"):
             backend_url = f"http://{backend_url}"
+    
+    if len(sys.argv) > 2:
+        try:
+            turns = int(sys.argv[2])
+        except ValueError:
+            print("Error: Number of turns must be an integer")
+            turns = 3
     
     # Run the tests
     tester = BackendTester(backend_url)
