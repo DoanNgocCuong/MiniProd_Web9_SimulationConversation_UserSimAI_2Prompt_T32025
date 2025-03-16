@@ -62,27 +62,232 @@
             const [userPrompts, setUserPrompts] = React.useState([
                 { 
                     id: 1, 
-                    content: "Xin chào, bạn có thể giúp mình không?", 
+                    content: "ROLE: You are\nUser: An (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
                     selected: true 
                 },
                 { 
                     id: 2, 
-                    content: "Làm thế nào để tạo một trang web đơn giản bằng HTML và CSS?", 
+                    content: "ROLE: You are\nUser: Lan (4 years old, Vietnam)\nAge & Level: 4 years old, English proficiency below A1\nYou are:", 
                     selected: false 
                 },
                 { 
                     id: 3, 
-                    content: "Bạn có thể giải thích về cách hoạt động của mô hình GPT không?", 
+                    content: "ROLE: You are\nUser: Hai (11 years old, Vietnam)\nAge & Level: 11 years old, English proficiency below A1\nYou are:", 
                     selected: false 
                 },
                 { 
                     id: 4, 
-                    content: "Giúp mình viết một email xin nghỉ phép gửi cho sếp", 
+                    content: "ROLE: You are\nUser: Minh (10 years old, Vietnam)\nAge & Level: 10 years old, English level A1\nYou are:", 
                     selected: false 
                 },
                 { 
                     id: 5, 
-                    content: "Bạn nghĩ gì về tương lai của trí tuệ nhân tạo?", 
+                    content: "ROLE: You are\nUser: Linh (8 years old, Vietnam)\nAge & Level: 8 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 6, 
+                    content: "ROLE: You are\nUser: Hoàng (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 7, 
+                    content: "ROLE: You are\nUser: Lâm (10 years old, Vietnam)\nAge & Level: 10 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 8, 
+                    content: "ROLE: You are\nUser: Tuấn (5 years old, Vietnam)\nAge & Level: 5 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 9, 
+                    content: "ROLE: You are\nUser: Cường (9 years old, Vietnam)\nAge & Level: 9 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 10, 
+                    content: "ROLE: You are\nUser: Thu (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 11, 
+                    content: "ROLE: You are\nUser: Nga (15 years old, Vietnam)\nAge & Level: 15 years old, English level A1-A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 12, 
+                    content: "ROLE: You are\nUser: Trung (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 13, 
+                    content: "ROLE: You are\nUser: Mai (6 years old, Vietnam)\nAge & Level: 6 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 14, 
+                    content: "ROLE: You are\nUser: Hải (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 15, 
+                    content: "ROLE: You are\nUser: Bình (14 years old, Vietnam)\nAge & Level: 14 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 16, 
+                    content: "ROLE: You are\nUser: Lý (13 years old, Vietnam)\nAge & Level: 13 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 17, 
+                    content: "ROLE: You are\nUser: Thái (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 18, 
+                    content: "ROLE: You are\nUser: Anh (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 19, 
+                    content: "ROLE: You are\nUser: Quân (11 years old, Vietnam)\nAge & Level: 11 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 20, 
+                    content: "ROLE: You are\nUser: Hà (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 21, 
+                    content: "ROLE: You are\nUser: Hùng (10 years old, Vietnam)\nAge & Level: 10 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 22, 
+                    content: "ROLE: You are\nUser: Phương (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 23, 
+                    content: "ROLE: You are\nUser: Thủy (7 years old, Vietnam)\nAge & Level: 7 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 24, 
+                    content: "ROLE: You are\nUser: Loan (8 years old, Vietnam)\nAge & Level: 8 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 25, 
+                    content: "ROLE: You are\nUser: Khánh (7 years old, Vietnam)\nAge & Level: 7 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 26, 
+                    content: "ROLE: You are\nUser: Hiếu (13 years old, Vietnam)\nAge & Level: 13 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 27, 
+                    content: "ROLE: You are\nUser: Tùng (12 years old, Vietnam)\nAge & Level: 12 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 28, 
+                    content: "ROLE: You are\nUser: Thanh (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 29, 
+                    content: "ROLE: You are\nUser: Diệp (17 years old, Vietnam)\nAge & Level: 17 years old, English level A1-A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 30, 
+                    content: "ROLE: You are\nUser: Dũng (14 years old, Vietnam)\nAge & Level: 14 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 31, 
+                    content: "ROLE: You are\nUser: Uyên (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 32, 
+                    content: "ROLE: You are\nUser: Mỹ (10 years old, Vietnam)\nAge & Level: 10 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 33, 
+                    content: "ROLE: You are\nUser: Vân (8 years old, Vietnam)\nAge & Level: 8 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 34, 
+                    content: "ROLE: You are\nUser: Hạnh (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 35, 
+                    content: "ROLE: You are\nUser: Quỳnh (6 years old, Vietnam)\nAge & Level: 6 years old, English proficiency below A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 36, 
+                    content: "ROLE: You are\nUser: Sơn (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 37, 
+                    content: "ROLE: You are\nUser: Đạt (10 years old, Vietnam)\nAge & Level: 10 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 38, 
+                    content: "ROLE: You are\nUser: Nam (12 years old, Vietnam)\nAge & Level: 12 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 39, 
+                    content: "ROLE: You are\nUser: Thư (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 40, 
+                    content: "ROLE: You are\nUser: Long (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 41, 
+                    content: "ROLE: You are\nUser: Duy (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 42, 
+                    content: "ROLE: You are\nUser: Hằng (8 years old, Vietnam)\nAge & Level: 8 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 43, 
+                    content: "ROLE: You are\nUser: Khôi (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 44, 
+                    content: "ROLE: You are\nUser: Nhung (11 years old, Vietnam)\nAge & Level: 11 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 45, 
+                    content: "ROLE: You are\nUser: Hồng (9 years old, Vietnam)\nAge & Level: 9 years old, English level A1\nYou are:", 
+                    selected: false 
+                },
+                { 
+                    id: 46, 
+                    content: "ROLE: You are\nUser: Cường (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2\nYou are:", 
                     selected: false 
                 }
             ]);
@@ -327,35 +532,14 @@
 
             const resetSimulation = () => {
                 setConversations([]);
-                setUserPrompts([
-                    { 
-                        id: 1, 
-                        content: "Xin chào, bạn có thể giúp mình không?", 
-                        selected: true 
-                    },
-                    { 
-                        id: 2, 
-                        content: "Làm thế nào để tạo một trang web đơn giản bằng HTML và CSS?", 
-                        selected: false 
-                    },
-                    { 
-                        id: 3, 
-                        content: "Bạn có thể giải thích về cách hoạt động của mô hình GPT không?", 
-                        selected: false 
-                    },
-                    { 
-                        id: 4, 
-                        content: "Giúp mình viết một email xin nghỉ phép gửi cho sếp", 
-                        selected: false 
-                    },
-                    { 
-                        id: 5, 
-                        content: "Bạn nghĩ gì về tương lai của trí tuệ nhân tạo?", 
-                        selected: false 
-                    }
-                ]);
+                // Cập nhật lại userPrompts với danh sách 46 role nhưng chỉ chọn role đầu tiên
+                setUserPrompts(userPrompts.map((prompt, index) => ({
+                    ...prompt,
+                    selected: index === 0
+                })));
                 setAgentPrompt("");
                 setIsSimulating(false);
+                setDebugData(null);
                 setSimulationId(null);
             };
 
@@ -542,232 +726,4 @@
                                             <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex items-center justify-center hover:shadow-lg transition-all mx-auto">
                                                 <img 
                                                     src="/images/DoanNgocCuong.png" 
-                                                    alt={`Prompt ${index + 1}`}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            
-                                            {/* Selection checkmark */}
-                                            {prompt.selected && (
-                                                <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full p-0.5 shadow-lg border-2 border-gray-900">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                </div>
-                                            )}
-                                            
-                                            {/* Content preview on hover */}
-                                            <div className={`absolute invisible group-hover:visible w-56 p-3 z-10 top-full left-1/2 transform -translate-x-1/2 mt-2 rounded-lg shadow-xl ${
-                                                isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
-                                            } text-xs border ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
-                                                <div className="font-bold mb-1">Prompt {index + 1}</div>
-                                                <div className="max-h-28 overflow-y-auto text-xs">
-                                                    {prompt.content || "Empty prompt"}
-                                                </div>
-                                                <div className="mt-2 flex justify-between items-center">
-                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                                                        prompt.selected 
-                                                            ? (isDarkMode ? "bg-blue-900 text-blue-100" : "bg-blue-100 text-blue-800") 
-                                                            : (isDarkMode ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-600")
-                                                    }`}>
-                                                        {prompt.selected ? "Selected" : "Not Selected"}
-                                                    </span>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingPrompt(prompt);
-                                                        }}
-                                                        className={`text-xs px-1.5 py-0.5 rounded-full ${
-                                                            isDarkMode ? "bg-blue-700 text-white hover:bg-blue-600" : "bg-blue-500 text-white hover:bg-blue-400"
-                                                        }`}
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        {/* Prompt name/label below avatar */}
-                                        <div className={`text-center mt-1 text-xs truncate ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                                            {index + 1}
-                                        </div>
-                                        
-                                        {/* Delete button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deletePrompt(prompt.id);
-                                            }}
-                                            className={`absolute -top-1 -left-1 p-0.5 rounded-full opacity-0 hover:opacity-100 group-hover:opacity-100 focus:opacity-100 ${
-                                                isDarkMode ? "bg-red-700 text-white" : "bg-red-500 text-white"
-                                            } transform transition-all duration-200 hover-scale active-scale ${
-                                                isSimulating || userPrompts.length <= 1 ? "cursor-not-allowed" : ""
-                                            }`}
-                                            disabled={isSimulating || userPrompts.length <= 1}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Simulation Controls */}
-                        <div className="mt-8 flex items-center justify-between">
-                            <button
-                                onClick={startSimulation}
-                                className={`px-6 py-2.5 rounded-full flex items-center justify-center gap-2 ${
-                                    isSimulating || connectionStatus !== "connected" 
-                                        ? "bg-gray-400 cursor-not-allowed" 
-                                        : "bg-blue-500 hover:bg-blue-600"
-                                } text-white font-medium transform transition-all duration-200 hover-scale active-scale shadow-lg`}
-                                disabled={isSimulating || connectionStatus !== "connected"}
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Simulating...
-                                    </>
-                                ) : (
-                                    "Start Simulation"
-                                )}
-                            </button>
-                            <button
-                                onClick={resetSimulation}
-                                className="px-6 py-2.5 rounded-full bg-gray-500 hover:bg-gray-600 text-white font-medium transform transition-all duration-200 hover-scale active-scale shadow-lg"
-                                disabled={isSimulating}
-                            >
-                                Reset Simulation
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Conversations Display */}
-                    {conversations.length > 0 && (
-                        <div className="mt-8 max-w-4xl mx-auto">
-                            <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                Simulated Conversations
-                            </h2>
-                            <div className="space-y-8">
-                                {conversations.map((conv) => (
-                                    <div key={conv.id} className={`p-6 rounded-2xl shadow-lg ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className={`font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                                Conversation {conv.id.substring(0, 8)}...
-                                            </h3>
-                                            <span className={`px-3 py-1 rounded-full text-sm ${
-                                                conv.status === "completed" ? "bg-green-100 text-green-800" : 
-                                                conv.status === "error" ? "bg-red-100 text-red-800" : 
-                                                "bg-blue-100 text-blue-800"
-                                            }`}>
-                                                {conv.status === "completed" ? "Completed" : 
-                                                 conv.status === "error" ? "Error" : 
-                                                 "In Progress"}
-                                            </span>
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            {conv.messages.length === 0 ? (
-                                                <div className={`text-center p-4 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                                    Không có tin nhắn nào trong cuộc trò chuyện này.
-                                                </div>
-                                            ) : (
-                                                conv.messages.map((msg, idx) => (
-                                                    <div key={idx} className={`p-4 rounded-xl ${
-                                                        msg.role === "User" ? 
-                                                        (isDarkMode ? "bg-blue-900/30 text-blue-100" : "bg-blue-100 text-blue-900") : 
-                                                        msg.role === "Agent" || msg.role === "Bot" ? 
-                                                        (isDarkMode ? "bg-purple-900/30 text-purple-100" : "bg-purple-100 text-purple-900") :
-                                                        (isDarkMode ? "bg-red-900/30 text-red-100" : "bg-red-100 text-red-900")
-                                                    }`}>
-                                                        <div className="font-bold mb-1">{msg.role}</div>
-                                                        <div style={{whiteSpace: "pre-wrap"}}>
-                                                            {formatMessageContent(msg.content)}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                        
-                                        {conv.status === "error" && (
-                                            <div className={`p-4 rounded-2xl bg-red-100 border border-red-300 mt-4 ${isDarkMode ? "text-red-200" : "text-red-800"}`}>
-                                                <p className="font-semibold">Lỗi:</p>
-                                                <p>{conv.error || "Đã xảy ra lỗi không xác định"}</p>
-                                                <p className="text-sm mt-2">
-                                                    Gợi ý: Nếu lỗi liên quan đến Bot ID, hãy thử sử dụng Bot ID 16 thay thế.
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Debug Panel */}
-                    <div className="mt-8 text-center">
-                        <button 
-                            onClick={() => setShowDebug(!showDebug)}
-                            className="px-4 py-2 bg-gray-500 text-white rounded-lg"
-                        >
-                            {showDebug ? "Hide Debug Data" : "Show Debug Data"}
-                        </button>
-                        
-                        {showDebug && debugData && (
-                            <div className="mt-4 p-4 bg-gray-800 text-white rounded-lg text-left overflow-auto max-h-96">
-                                <pre>{JSON.stringify(debugData, null, 2)}</pre>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Modal for editing prompts */}
-                    {editingPrompt && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className={`p-6 rounded-xl shadow-xl max-w-md w-full ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
-                                <h3 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                    Edit Prompt {userPrompts.findIndex(p => p.id === editingPrompt.id) + 1}
-                                </h3>
-                                <textarea
-                                    value={editingPrompt.content}
-                                    onChange={(e) => setEditingPrompt({...editingPrompt, content: e.target.value})}
-                                    placeholder="Enter user prompt"
-                                    className={`w-full p-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-500/20 outline-none mb-4 ${
-                                        isDarkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-200 text-black"
-                                    }`}
-                                    rows="5"
-                                />
-                                <div className="flex justify-end space-x-2">
-                                    <button
-                                        onClick={() => setEditingPrompt(null)}
-                                        className={`px-4 py-2 rounded-lg ${
-                                            isDarkMode ? "bg-gray-700 text-white" : "bg-gray-200 text-gray-800"
-                                        }`}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            updatePromptText(editingPrompt.id, editingPrompt.content);
-                                            setEditingPrompt(null);
-                                        }}
-                                        className="px-4 py-2 rounded-lg bg-blue-500 text-white"
-                                    >
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        ReactDOM.render(<AIConversationSimulator />, document.getElementById("root"));
-    </script>
-</body>
-</html>
+                                                    alt={`
