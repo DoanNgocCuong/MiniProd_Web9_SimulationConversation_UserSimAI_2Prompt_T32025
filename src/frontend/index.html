@@ -34,6 +34,36 @@
         code {
             font-family: monospace;
         }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(100,100,100,0.6);
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(100,100,100,0.8);
+        }
+        
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(200,200,200,0.4);
+        }
+        
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(200,200,200,0.6);
+        }
     </style>
 </head>
 <body>
@@ -85,18 +115,12 @@ TASK: Your task is follow each step the ROBOT guides you.
 You respond extremely briefly.`;
         };
 
-        // Hàm định dạng thời gian
+        // Cập nhật hàm định dạng thời gian để hiển thị ngắn gọn hơn
         const formatTime = (timestamp) => {
             if (!timestamp) return "N/A";
             const date = new Date(timestamp);
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        };
-
-        // Hàm toggle chi tiết cuộc trò chuyện
-        const toggleConversationDetails = (index) => {
-            setConversations(conversations.map((conv, i) => 
-                i === index ? { ...conv, showDetails: !conv.showDetails } : conv
-            ));
+            // Chỉ hiển thị giờ và phút, không hiển thị giây và AM/PM
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
         };
 
         // Create the application component
@@ -285,47 +309,187 @@ You respond extremely briefly.`;
                 );
             }, []); // Chỉ chạy một lần khi component được mount
 
-            // Hàm tạo dữ liệu mẫu cho conversations
+            // Cập nhật hàm tạo dữ liệu mẫu cho conversations với cuộc hội thoại thực tế hơn
             const generateMockData = (selectedPrompts) => {
                 return selectedPrompts.map(prompt => {
-                    // Trích xuất tên người dùng từ prompt
-                    const nameLine = prompt.content.split('\n')[1];
-                    const userName = nameLine ? nameLine.trim() : 'User';
+                    // Trích xuất thông tin từ prompt
+                    const contentLines = prompt.content.split('\n');
+                    const nameLine = contentLines.find(line => line.trim().startsWith('User:'));
+                    const ageLine = contentLines.find(line => line.trim().startsWith('Age & Level:'));
+                    const personalityLine = contentLines.find(line => line.trim().startsWith('Personality:'));
                     
-                    // Tạo messages mẫu
+                    // Trích xuất tên và tuổi
+                    const userName = nameLine ? nameLine.replace('User:', '').trim() : 'Unknown User';
+                    const ageMatch = ageLine ? ageLine.match(/(\d+)\s+years/) : null;
+                    const age = ageMatch ? parseInt(ageMatch[1]) : 5;
+                    
+                    // Xác định tính cách
+                    const personality = personalityLine ? personalityLine.replace('Personality:', '').trim() : '';
+                    const isStubborn = personality.toLowerCase().includes('stubborn') || 
+                                      personality.toLowerCase().includes('resist') || 
+                                      userName.includes('Bear') || 
+                                      userName.includes('Tit');
+                                      
+                    const isPlayful = personality.toLowerCase().includes('playful') || 
+                                     personality.toLowerCase().includes('curious') ||
+                                     userName.includes('Lu') ||
+                                     userName.includes('Bao');
+                                     
+                    const isIntelligent = personality.toLowerCase().includes('intelligent') || 
+                                         personality.toLowerCase().includes('smart') ||
+                                         userName.includes('An') ||
+                                         userName.includes('Nam');
+                    
+                    // Tạo messages mẫu dựa trên thông tin người dùng
                     const now = new Date();
-                    const messages = [
-                        {
-                            role: 'user',
-                            content: 'Hello! Can you teach me some English words?',
-                            timestamp: new Date(now.getTime() - 60000).toISOString()
-                        },
-                        {
-                            role: 'assistant',
-                            content: 'Tớ sẽ dạy. Rất vui đây.',
-                            timestamp: new Date(now.getTime() - 50000).toISOString()
-                        },
-                        {
-                            role: 'user',
-                            content: 'What do you call this animal? 🐶',
-                            timestamp: new Date(now.getTime() - 40000).toISOString()
-                        },
-                        {
-                            role: 'assistant',
-                            content: 'Đó là chó. Tiếng Anh là "dog".',
-                            timestamp: new Date(now.getTime() - 30000).toISOString()
-                        },
-                        {
-                            role: 'user',
-                            content: 'How about this one? 🐱',
-                            timestamp: new Date(now.getTime() - 20000).toISOString()
-                        },
-                        {
-                            role: 'assistant',
-                            content: 'Đó là mèo. Tiếng Anh là "cat".',
-                            timestamp: new Date(now.getTime() - 10000).toISOString()
-                        }
-                    ];
+                    
+                    // Các mẫu hội thoại khác nhau dựa trên đặc điểm trẻ
+                    let messages = [];
+                    
+                    if (isStubborn) {
+                        // Cuộc trò chuyện cho trẻ cứng đầu
+                        messages = [
+                            {
+                                role: 'assistant',
+                                content: 'Xin chào! Hôm nay chúng ta sẽ học về các con vật. Bạn thích con vật nào nhất?',
+                                timestamp: new Date(now.getTime() - 60000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ không thích. Chán lắm.',
+                                timestamp: new Date(now.getTime() - 50000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Vậy chúng ta học về màu sắc nhé? Đây là màu đỏ 🔴',
+                                timestamp: new Date(now.getTime() - 40000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ biết rồi. Không thích học.',
+                                timestamp: new Date(now.getTime() - 30000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Hay là chơi trò chơi đoán hình? Nhìn hình này giống cái gì?',
+                                timestamp: new Date(now.getTime() - 20000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Không muốn chơi. Tớ muốn xem video.',
+                                timestamp: new Date(now.getTime() - 10000).toISOString()
+                            }
+                        ];
+                    } else if (isPlayful) {
+                        // Cuộc trò chuyện cho trẻ hiếu động, thích chơi
+                        messages = [
+                            {
+                                role: 'assistant',
+                                content: 'Xin chào! Hôm nay chúng ta sẽ học về màu sắc bằng trò chơi. Bạn thích không?',
+                                timestamp: new Date(now.getTime() - 60000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ thích chơi. Chơi gì vậy?',
+                                timestamp: new Date(now.getTime() - 50000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Trò chơi tìm đồ vật có màu đỏ. Bạn có thể tìm được không?',
+                                timestamp: new Date(now.getTime() - 40000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Quả táo đỏ. Áo đỏ nữa.',
+                                timestamp: new Date(now.getTime() - 30000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Giỏi lắm! Bây giờ tìm đồ vật màu xanh nhé?',
+                                timestamp: new Date(now.getTime() - 20000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ thấy lá cây. Bầu trời xanh nữa.',
+                                timestamp: new Date(now.getTime() - 10000).toISOString()
+                            }
+                        ];
+                    } else if (isIntelligent) {
+                        // Cuộc trò chuyện cho trẻ thông minh
+                        messages = [
+                            {
+                                role: 'assistant',
+                                content: 'Hôm nay chúng ta sẽ học về động vật và môi trường sống của chúng. Bạn đã biết con vật nào sống dưới nước?',
+                                timestamp: new Date(now.getTime() - 60000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Cá sống dưới nước. Cá voi nữa.',
+                                timestamp: new Date(now.getTime() - 50000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Rất tốt! Còn động vật nào sống trên cạn?',
+                                timestamp: new Date(now.getTime() - 40000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Chó sống trên cạn. Hổ báo sư tử.',
+                                timestamp: new Date(now.getTime() - 30000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Bạn biết nhiều quá! Vậy còn động vật sống được cả trên cạn và dưới nước?',
+                                timestamp: new Date(now.getTime() - 20000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ biết ếch nhái. Cá sấu cũng được.',
+                                timestamp: new Date(now.getTime() - 10000).toISOString()
+                            }
+                        ];
+                    } else {
+                        // Cuộc trò chuyện mặc định cho các trẻ khác
+                        messages = [
+                            {
+                                role: 'assistant',
+                                content: 'Chào bạn! Hôm nay chúng ta sẽ học từ vựng về các loài động vật. Bạn thích con vật nào?',
+                                timestamp: new Date(now.getTime() - 60000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ thích mèo. Mèo dễ thương.',
+                                timestamp: new Date(now.getTime() - 50000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Mèo tiếng Anh là "cat". Bạn có thể đọc theo không? C-A-T.',
+                                timestamp: new Date(now.getTime() - 40000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Cát. Tớ thích mèo cát.',
+                                timestamp: new Date(now.getTime() - 30000).toISOString()
+                            },
+                            {
+                                role: 'assistant',
+                                content: 'Giỏi lắm! Bạn thích con vật nào nữa không?',
+                                timestamp: new Date(now.getTime() - 20000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ thích chó. Chó trung thành.',
+                                timestamp: new Date(now.getTime() - 10000).toISOString()
+                            }
+                        ];
+                    }
+                    
+                    // Thêm độ ngẫu nhiên cho thời gian
+                    messages.forEach((msg, index) => {
+                        const randomOffset = Math.floor(Math.random() * 5000);
+                        const baseTime = now.getTime() - ((6 - index) * 10000) - randomOffset;
+                        msg.timestamp = new Date(baseTime).toISOString();
+                    });
                     
                     return {
                         userInfo: prompt.content,
@@ -338,14 +502,14 @@ You respond extremely briefly.`;
             // Cập nhật hàm startSimulation để sử dụng dữ liệu mẫu khi không kết nối được
             const startSimulation = async () => {
                 if (isSimulating) return;
-                
+
                 // Lấy các prompt đã được chọn
                 const selectedPrompts = userPrompts.filter(prompt => prompt.selected);
                 if (selectedPrompts.length === 0) {
                     alert("Please select at least one prompt to start simulation.");
                     return;
                 }
-                
+
                 setIsSimulating(true);
                 setConversations([]);
                 setSimulationId(null);
@@ -439,6 +603,15 @@ You respond extremely briefly.`;
                 setIsSimulating(false);
                 setDebugData(null);
                 setSimulationId(null);
+            };
+
+            // Di chuyển hàm toggleConversationDetails vào trong component
+            const toggleConversationDetails = (index) => {
+                setConversations(prevConversations => 
+                    prevConversations.map((conv, i) => 
+                        i === index ? { ...conv, showDetails: !conv.showDetails } : conv
+                    )
+                );
             };
 
             return (
@@ -660,7 +833,7 @@ You respond extremely briefly.`;
                                     </div>
                                 ))}
                             </div>
-                            
+
                             {/* Nút "Xem thêm" nếu có nhiều hơn 20 prompt */}
                             {userPrompts.length > 20 && (
                                 <div className="text-center mt-4 mb-4">
@@ -685,21 +858,21 @@ You respond extremely briefly.`;
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>Conversation Simulation</h2>
                                 <div className="flex gap-2">
-                                    <button
+                                <button
                                         onClick={resetSimulation}
                                         className={`px-4 py-2 rounded-full ${
                                             isDarkMode 
                                                 ? "bg-yellow-600 hover:bg-yellow-500" 
                                                 : "bg-yellow-500 hover:bg-yellow-400"
                                         } text-white flex items-center gap-2 transition-all hover-scale active-scale`}
-                                        disabled={isSimulating}
-                                    >
+                                    disabled={isSimulating}
+                                >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                                         </svg>
                                         Reset
-                                    </button>
-                                    <button
+                                </button>
+                                <button
                                         onClick={startSimulation}
                                         className={`px-4 py-2 rounded-full ${
                                             isDarkMode 
@@ -724,21 +897,21 @@ You respond extremely briefly.`;
                                                 Start Simulation
                                             </>
                                         )}
-                                    </button>
-                                </div>
-                            </div>
-                            
+                                </button>
+                        </div>
+                    </div>
+
                             {/* Hiển thị kết quả mô phỏng theo từng user */}
-                            {conversations.length > 0 && (
+                    {conversations.length > 0 && (
                                 <div className="mt-4">
                                     <h3 className={`text-lg font-semibold mb-3 ${isDarkMode ? "text-white" : "text-gray-700"}`}>
                                         Simulation Results
-                                    </h3>
+                                            </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {conversations.map((conversation, index) => (
                                             <div 
                                                 key={index}
-                                                className={`p-4 rounded-xl shadow-md transition-all hover:shadow-lg ${
+                                                className={`p-4 rounded-xl shadow-md transition-all ${conversation.showDetails ? "scale-105 z-10" : ""} ${
                                                     isDarkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-white hover:bg-gray-50"
                                                 }`}
                                             >
@@ -756,52 +929,105 @@ You respond extremely briefly.`;
                                                     </div>
                                                     <div>
                                                         <h4 className={`font-medium ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                                            {conversation.userInfo?.split('\n')[0]?.replace('User: ', '') || `User ${index + 1}`}
+                                                            {conversation.userInfo?.split('\n')[1]?.trim() || `User ${index + 1}`}
                                                         </h4>
                                                         <p className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
-                                                            {conversation.userInfo?.split('\n')[1]?.replace('Age & Level: ', '') || "Unknown level"}
+                                                            {conversation.userInfo?.split('\n')[2]?.replace('Age & Level:', '').trim() || "Unknown level"}
                                                         </p>
-                                                    </div>
+                                        </div>
                                                     <button 
-                                                        className={`ml-auto p-1.5 rounded-full ${
+                                                        className={`ml-auto p-1.5 rounded-full transition-all ${
                                                             isDarkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-200 hover:bg-gray-300"
                                                         }`}
                                                         onClick={() => toggleConversationDetails(index)}
+                                                        aria-label={conversation.showDetails ? "Thu gọn" : "Xem chi tiết"}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform ${conversation.showDetails ? "transform rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
                                                             <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                                                         </svg>
                                                     </button>
                                                 </div>
                                                 
-                                                {/* Hiển thị tóm tắt cuộc trò chuyện */}
-                                                <div className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                                                    <p>Total turns: {conversation.messages?.length || 0}</p>
-                                                    <p>Last response: {conversation.messages?.length > 0 ? formatTime(conversation.messages[conversation.messages.length - 1].timestamp) : "N/A"}</p>
-                                                </div>
-                                                
-                                                {/* Chi tiết cuộc trò chuyện (hiển thị khi mở rộng) */}
-                                                {conversation.showDetails && (
-                                                    <div className="mt-3 p-3 rounded-lg text-sm overflow-y-auto max-h-80"
-                                                        style={{ backgroundColor: isDarkMode ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.05)" }}
-                                                    >
-                                                        {conversation.messages?.map((msg, msgIndex) => (
-                                                            <div key={msgIndex} className={`mb-3 ${msgIndex % 2 === 0 ? "pl-2 border-l-4 border-blue-500" : "pl-2 border-l-4 border-green-500"}`}>
-                                                                <div className={`font-semibold mb-1 ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
-                                                                    {msgIndex % 2 === 0 ? "User" : "Bot"} ({formatTime(msg.timestamp)}):
-                                                                </div>
-                                                                <div className={`${isDarkMode ? "text-gray-300" : "text-gray-600"} whitespace-pre-wrap`}>
-                                                                    {msg.content}
-                                                                </div>
+                                                {/* Thu gọn: Hiển thị thông tin tóm tắt */}
+                                                {!conversation.showDetails && (
+                                                    <div className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                                                        <div className="flex justify-between mb-1">
+                                                            <span>Tổng lượt:</span>
+                                                            <span className="font-medium">{conversation.messages?.length || 0}</span>
+                                                        </div>
+                                                        
+                                                        {/* Trích đoạn tin nhắn cuối cùng */}
+                                                        {conversation.messages?.length > 0 && (
+                                                            <div className="mt-2 border-t pt-2 border-gray-600">
+                                                                <p className="text-xs font-medium mb-1">Tin nhắn cuối:</p>
+                                                                <p className="text-xs truncate">
+                                                                    {conversation.messages[conversation.messages.length - 1].content}
+                                                                </p>
                                                             </div>
-                                                        ))}
+                                                        )}
+
+                                                        <div className="mt-3 text-center">
+                                                            <button 
+                                                                onClick={() => toggleConversationDetails(index)}
+                                                                className={`text-xs px-3 py-1 rounded-md ${
+                                                                    isDarkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                                                                }`}
+                                                            >
+                                                                Xem chi tiết
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )}
+                                                
+                                                {/* Mở rộng: Hiển thị toàn bộ cuộc trò chuyện */}
+                                                {conversation.showDetails && (
+                                                    <div className="mt-1">
+                                                        {/* Thông tin thống kê */}
+                                                        <div className={`text-xs grid grid-cols-1 gap-1 mb-3 p-2 rounded ${
+                                                            isDarkMode ? "bg-gray-800" : "bg-gray-100"
+                                                        }`}>
+                                                            <div className="text-center">
+                                                                <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Tổng lượt</div>
+                                                                <div className="font-bold">{conversation.messages?.length || 0}</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Chi tiết cuộc trò chuyện */}
+                                                        <div className="mt-3 p-3 rounded-lg text-sm overflow-y-auto max-h-96 custom-scrollbar"
+                                                            style={{ backgroundColor: isDarkMode ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.05)" }}
+                                                        >
+                                                            {conversation.messages?.map((msg, msgIndex) => (
+                                                                <div key={msgIndex} className={`mb-3 ${msgIndex % 2 === 0 ? 
+                                                                    `${isDarkMode ? "bg-gray-800" : "bg-gray-100"} p-2 rounded-lg` : 
+                                                                    `${isDarkMode ? "bg-blue-900" : "bg-blue-50"} p-2 rounded-lg`}`}
+                                                                >
+                                                                    <div className={`flex justify-between items-center text-xs mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                                        <span>{msgIndex % 2 === 0 ? "Học sinh" : "Bot"}</span>
+                                                                    </div>
+                                                                    <div className={`${isDarkMode ? "text-gray-300" : "text-gray-700"} whitespace-pre-wrap text-sm`}>
+                                                                        {msg.content}
+                                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                                        <div className="mt-3 text-center">
+                                                            <button 
+                                                                onClick={() => toggleConversationDetails(index)}
+                                                                className={`text-xs px-3 py-1 rounded-md ${
+                                                                    isDarkMode ? "bg-gray-600 hover:bg-gray-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                                                                }`}
+                                                            >
+                                                                Thu gọn
+                                                            </button>
+                                                        </div>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
-                                </div>
-                            )}
+                                ))}
+                            </div>
+                        </div>
+                    )}
                         </div>
 
                         {/* Thêm cảnh báo khi sử dụng dữ liệu mẫu */}
