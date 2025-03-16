@@ -22,4 +22,4 @@ OPENAI_MAX_TOKENS = 100
 OPENAI_TEMPERATURE = 0.7
 
 # HTTP client settings
-HTTP_TIMEOUT = 3600.0 
+HTTP_TIMEOUT = 3600.0  # 1 hour timeout 

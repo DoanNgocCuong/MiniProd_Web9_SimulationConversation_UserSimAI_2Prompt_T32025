@@ -13,47 +13,17 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from def_simulation import run_simulation_with_params
 
-# Configure logging with fallback to console if file logging fails
-try:
-    # Configure logging
-    log_dir = "logs"
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, "api.log")
-    
-    # Try to create a test file to check permissions
-    try:
-        with open(log_file, 'a') as f:
-            pass
-        
-        # If we can write to the file, set up both handlers
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler(log_file)
-            ]
-        )
-    except PermissionError:
-        # If we can't write to the file, only use console logging only.
-        print(f"WARNING: Cannot write to log file {log_file}. Using console logging only.")
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler()
-            ]
-        )
-except Exception as e:
-    # Fallback to basic logging if anything goes wrong
-    print(f"Error setting up logging: {str(e)}")
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
+# Thiết lập logging chi tiết
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Log ra console
+        logging.FileHandler("logs/api_detailed.log")  # Log ra file
+    ]
+)
 logger = logging.getLogger("simulation-api")
-logger.info("Logging initialized")
+logger.info("Logging initialized with detailed configuration")
 
 # Create FastAPI app
 app = FastAPI(title="Simulation API")
@@ -98,33 +68,40 @@ class SimulationRequest(BaseModel):
 # Define API endpoints
 @app.post("/run-simulation")
 async def api_run_simulation(request: SimulationRequest):
-    logger.info(f"Starting simulation with bot_id={request.bot_id}, prompt='{request.user_prompt}'")
-    print("api_run_simulation")
+    logger.info(f"Starting simulation with params: {request}")
     try:
-        start_time = time.time()
-        # Thêm log chi tiết hơn
-        logger.info(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
+        # Thêm log để debug
+        logger.info(f"Starting simulation with params: {request}")
         
-        result = await run_simulation_with_params(
-            bot_id=request.bot_id,
-            user_prompt=request.user_prompt,
-            max_turns=request.max_turns,
-            history=request.history
+        # Tăng timeout cho các request đến API bên ngoài
+        result = await asyncio.wait_for(
+            run_simulation_with_params(
+                bot_id=request.bot_id,
+                user_prompt=request.user_prompt,
+                max_turns=request.max_turns,
+                history=request.history
+            ),
+            timeout=1800  # Tăng lên 30 phút
         )
-        elapsed_time = time.time() - start_time
-        logger.info(f"Simulation completed in {elapsed_time:.3f}s")
+        
+        logger.info("Simulation completed successfully")
         return result
+    except asyncio.TimeoutError:
+        logger.error("Simulation timed out after 30 minutes")
+        return {
+            "success": False,
+            "conversation": [],
+            "error": "Simulation timed out after 30 minutes"
+        }
     except Exception as e:
         logger.error(f"Simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
-        # Trả về lỗi chi tiết hơn
         return {
             "success": False,
             "conversation": [],
             "error": str(e),
             "traceback": traceback.format_exc()
         }
-        # raise HTTPException(status_code=500, detail=str(e))
 
 # Health check endpoint
 @app.get("/health")
@@ -136,7 +113,10 @@ async def health_check():
     api_error = None
     try:
         api_url = os.environ.get("API_BASE_URL", "http://103.253.20.13:9404")
+        logger.info(f"Trying to connect to: {api_url}")
         response = requests.get(f"{api_url}/robot-ai-lesson/api/v1/health", timeout=5)
+        logger.info(f"Response status: {response.status_code}")
+        logger.info(f"Response content: {response.text}")
         if response.status_code == 200:
             api_status = "connected"
         else:
@@ -186,24 +166,37 @@ async def test_simulation():
 async def simulate(data: dict = Body(...)):
     logger.info(f"Simulate endpoint called with data: {data}")
     try:
-        # You can either:
-        # 1. Process the data directly here
-        # 2. Or call your existing simulation function
+        # Log chi tiết
+        logger.info(f"Starting simulation with bot_id={data.get('bot_id')}, prompt='{data.get('user_prompt')}'")
+        logger.info(f"Max turns: {data.get('max_turns', 3)}")
+        logger.info(f"History provided: {'Yes' if data.get('history') else 'No'}")
         
-        # Option 2 example:
-        bot_id = data.get("bot_id")
-        user_prompt = data.get("user_prompt")
-        max_turns = data.get("max_turns", 3)
-        history = data.get("history")
-        
-        result = await run_simulation_with_params(
-            bot_id=bot_id,
-            user_prompt=user_prompt,
-            max_turns=max_turns,
-            history=history
+        # Tăng timeout cho các request đến API bên ngoài
+        start_time = time.time()
+        result = await asyncio.wait_for(
+            run_simulation_with_params(
+                bot_id=data.get("bot_id"),
+                user_prompt=data.get("user_prompt"),
+                max_turns=data.get("max_turns", 3),
+                history=data.get("history")
+            ),
+            timeout=1800  # Tăng lên 30 phút
         )
+        elapsed_time = time.time() - start_time
+        
+        # Log kết quả
+        logger.info(f"Simulation completed in {elapsed_time:.2f} seconds")
+        logger.info(f"Conversation length: {len(result.get('conversation', []))} messages")
+        logger.info(f"Simulation success: {result.get('success', False)}")
         
         return result
+    except asyncio.TimeoutError:
+        logger.error("Simulation timed out after 30 minutes")
+        return {
+            "success": False,
+            "conversation": [],
+            "error": "Simulation timed out after 30 minutes"
+        }
     except Exception as e:
         logger.error(f"Simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
@@ -214,16 +207,48 @@ async def simulate(data: dict = Body(...)):
             "traceback": traceback.format_exc()
         }
 
+# Hàm ghi log chi tiết
+def log_step(message, level="INFO"):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [{level}] {message}")
+    # Ghi vào file log
+    try:
+        with open("logs/startup.log", "a") as f:
+            f.write(f"[{timestamp}] [{level}] {message}\n")
+    except:
+        pass
+    
+    # Sử dụng logger để ghi log chi tiết
+    if level == "INFO":
+        logger.info(message)
+    elif level == "ERROR":
+        logger.error(message)
+    elif level == "WARNING":
+        logger.warning(message)
+    elif level == "DEBUG":
+        logger.debug(message)
+
+# Thêm log khi khởi động
+log_step("=== STARTING APPLICATION ===")
+log_step(f"Python version: {sys.version}")
+log_step(f"Current directory: {os.getcwd()}")
+log_step(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
+log_step(f"API_BASE_URL: {os.environ.get('API_BASE_URL', 'Not set')}")
+
 # In Docker, we don't need to find an available port
 # The port is fixed in the Dockerfile and docker-compose.yml
 if __name__ == "__main__":
     # Check if running in Docker
     in_docker = os.environ.get("DOCKER", False)
     
+    log_step(f"Running in Docker: {in_docker}")
+    
     if in_docker:
         # Docker setup - port is fixed
         logger.info("Running in Docker environment")
+        log_step("Running in Docker environment")
         import uvicorn
+        log_step("Starting uvicorn server on port 25050")
         uvicorn.run("main:app", host="0.0.0.0", port=25050)
     else:
         # Local development setup - find available port
@@ -241,11 +266,41 @@ if __name__ == "__main__":
             # Find an available port
             port = find_available_port()
             logger.info(f"Starting server on port {port}")
+            log_step(f"Starting server on port {port}")
             print(f"Starting server on port {port}")
             uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
         except ModuleNotFoundError as e:
             error_msg = f"Error: {e}"
             logger.error(error_msg)
+            log_step(error_msg, "ERROR")
             print(error_msg)
             print("Please install required dependencies:")
             print("pip install fastapi uvicorn typing-extensions")
+
+@app.get("/test-api-connection")
+async def test_api_connection():
+    try:
+        response = requests.post(
+            "http://103.253.20.13:9404/robot-ai-lesson/api/v1/bot/initConversation",
+            headers={'Content-Type': 'application/json'},
+            json={"bot_id": 16, "conversation_id": "test", "input_slots": {}},
+            timeout=1800  # Tăng lên 30 phút
+        )
+        return {
+            "status": response.status_code,
+            "content": response.text,
+            "time": time.time()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/debug")
+async def debug():
+    return {
+        "status": "running",
+        "time": time.time(),
+        "environment": os.environ.get("ENVIRONMENT", "development"),
+        "python_version": sys.version,
+        "hostname": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname())
+    }

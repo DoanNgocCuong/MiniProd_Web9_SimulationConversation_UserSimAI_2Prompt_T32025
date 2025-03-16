@@ -11,27 +11,63 @@ import openai
 from dotenv import load_dotenv
 import logging
 import random
+import traceback
 
-# Thiết lập logging
+# Thiết lập logging chi tiết
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Log ra console
+        logging.FileHandler("logs/simulation_detailed.log")  # Log ra file
+    ]
+)
 logger = logging.getLogger("simulation")
+
+# Thêm vào đầu file, sau phần import
+def log_step(message, level="INFO"):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [{level}] {message}")
+    # Ghi vào file log
+    try:
+        with open("logs/simulation.log", "a") as f:
+            f.write(f"[{timestamp}] [{level}] {message}\n")
+    except:
+        pass  # Bỏ qua nếu không ghi được vào file
+    
+    # Sử dụng logger để ghi log chi tiết
+    if level == "INFO":
+        logger.info(message)
+    elif level == "ERROR":
+        logger.error(message)
+    elif level == "WARNING":
+        logger.warning(message)
+    elif level == "DEBUG":
+        logger.debug(message)
+
+# Thêm log khi khởi động
+log_step("=== LOADING SIMULATION MODULE ===")
+log_step(f"Current directory: {os.getcwd()}")
+log_step(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
 
 # Load environment variables from .env file
 # Đảm bảo tìm file .env ở thư mục hiện tại
 env_path = os.path.join(os.path.dirname(__file__), '.env')
+log_step(f"Looking for .env file at: {env_path}")
 if os.path.exists(env_path):
-    logger.info(f"Loading .env file from {env_path}")
+    log_step(f"Loading .env file from {env_path}")
     load_dotenv(env_path)
 else:
-    logger.warning(f".env file not found at {env_path}, trying default location")
+    log_step(f".env file not found at {env_path}, trying default location")
     load_dotenv()
 
 # Get OpenAI API key from environment variable
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    logger.error("Error: OPENAI_API_KEY environment variable not set")
+    log_step("Error: OPENAI_API_KEY environment variable not set", "ERROR")
     print("Error: OPENAI_API_KEY environment variable not set")
 else:
-    logger.info("OPENAI_API_KEY is set")
+    log_step("OPENAI_API_KEY is set")
     print("OPENAI_API_KEY is set")
 
 # Thiết lập API key cho OpenAI SDK 0.28.1
@@ -39,7 +75,7 @@ openai.api_key = api_key
 
 # Lấy API base URL từ biến môi trường hoặc sử dụng giá trị mặc định
 API_BASE_URL = os.getenv("API_BASE_URL", "http://103.253.20.13:9404")
-logger.info(f"Using API base URL: {API_BASE_URL}")
+log_step(f"Using API base URL: {API_BASE_URL}")
 
 # Initialize FastAPI app
 app = FastAPI(title="Bot Simulation API")
@@ -143,17 +179,25 @@ class SimulationTester:
         try:
             start_time = time.time()
             logger.info(f"Sending request to {self.webhook_endpoint}")
+            
+            # Thêm log chi tiết
+            logger.info(f"Request payload: {json.dumps(payload)}")
+            
             response = requests.post(
                 self.webhook_endpoint,
                 headers={'Content-Type': 'application/json'},
                 json=payload,
-                timeout=30  # Tăng timeout lên 30 giây
+                timeout=1800  # Tăng timeout lên 30 phút
             )
-            elapsed_time = time.time() - start_time
             
+            elapsed_time = time.time() - start_time
             logger.info(f"Response received in {elapsed_time:.2f}s with status code {response.status_code}")
-            print(f"Response received in {elapsed_time:.2f} seconds")
-            print(f"Status code: {response.status_code}")
+            
+            # Thêm log chi tiết
+            if response.status_code == 200:
+                logger.info(f"Response content: {response.text[:500]}...")
+            else:
+                logger.error(f"Error response: {response.text}")
             
             if response.status_code != 200:
                 error_msg = f"Error: HTTP {response.status_code}, Response: {response.text}"
@@ -320,7 +364,7 @@ class SimulationTester:
 
 async def run_simulation_with_params(bot_id=16, user_prompt="sẵn sàng", max_turns=3, history=None):
     """
-    Run a simulation with specific parameters and return the conversation.
+    Run a simulation with specific parameters.
     
     Args:
         bot_id (int): ID of the bot to simulate
@@ -329,30 +373,44 @@ async def run_simulation_with_params(bot_id=16, user_prompt="sẵn sàng", max_t
         history (list): Optional existing conversation history
         
     Returns:
-        dict: Contains success status and conversation history
+        dict: Simulation results
     """
-    logger.info(f"Starting run_simulation_with_params: bot_id={bot_id}, user_prompt='{user_prompt}', max_turns={max_turns}")
     try:
-        # Kiểm tra API key
-        if not api_key:
-            error_msg = "OPENAI_API_KEY environment variable not set"
-            logger.error(error_msg)
-            return {
-                "success": False,
-                "conversation": [],
-                "error": error_msg
-            }
+        # Log chi tiết
+        logger.info(f"Starting simulation with params: bot_id={bot_id}, prompt='{user_prompt}', max_turns={max_turns}")
+        logger.info(f"History provided: {'Yes' if history else 'No'}")
         
         # Initialize tester with specified bot_id
         tester = SimulationTester(bot_id)
         
         # Set conversation history if provided
         if history:
-            tester.conversation_history = history
-            logger.info(f"Using provided conversation history with {len(history)} messages")
+            if isinstance(history, str):
+                try:
+                    # Try to parse JSON string
+                    history_data = json.loads(history)
+                    logger.info(f"Parsed history from JSON string, {len(history_data)} messages")
+                    tester.conversation_history = history_data
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse history JSON: {str(e)}")
+                    return {
+                        "success": False,
+                        "conversation": [],
+                        "error": f"Invalid history JSON: {str(e)}"
+                    }
+            else:
+                logger.info(f"Using provided history object, {len(history)} messages")
+                tester.conversation_history = history
         
         # Run simulation
+        start_time = time.time()
         success = await tester.run_simulation(user_prompt, max_turns)
+        elapsed_time = time.time() - start_time
+        
+        # Log kết quả
+        logger.info(f"Simulation completed in {elapsed_time:.2f} seconds")
+        logger.info(f"Conversation length: {len(tester.conversation_history)} messages")
+        logger.info(f"Simulation success: {success}")
         
         # Format the conversation for return
         formatted_conversation = []
@@ -363,7 +421,6 @@ async def run_simulation_with_params(bot_id=16, user_prompt="sẵn sàng", max_t
                 "content": msg["content"]
             })
         
-        logger.info(f"Simulation completed with success={success}, conversation length={len(formatted_conversation)}")
         return {
             "success": success,
             "conversation": formatted_conversation
@@ -372,7 +429,7 @@ async def run_simulation_with_params(bot_id=16, user_prompt="sẵn sàng", max_t
     except Exception as e:
         error_msg = f"Error in simulation: {str(e)}"
         logger.error(error_msg)
-        logger.exception("Exception details:")
+        logger.error(traceback.format_exc())
         print(error_msg)
         return {
             "success": False,

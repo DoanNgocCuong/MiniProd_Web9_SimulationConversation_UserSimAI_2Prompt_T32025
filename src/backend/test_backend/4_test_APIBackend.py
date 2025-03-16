@@ -163,12 +163,18 @@ class APITester:
             data = response.json()
             print(f"\nAPI Status: {data.get('status')}")
             
-            if data.get("status") == "error":
+            # Kiểm tra lỗi trong response
+            if data.get("error"):
                 print(f"❌ Simulation FAILED - API returned error: {data.get('error')}")
                 return data
             
-            # Display conversation
+            # Kiểm tra xem có conversation không thay vì kiểm tra status
             conversation = data.get("conversation", [])
+            if not conversation:
+                print(f"❌ Simulation FAILED - No conversation returned")
+                return {"status": "error", "error": "No conversation returned"}
+            
+            # Display conversation
             print(f"\n===== Conversation ({len(conversation)} messages) =====")
             
             for i, msg in enumerate(conversation):
@@ -185,6 +191,9 @@ class APITester:
                 print(f"{i+1}. {role_name}: {display_content}")
             
             print("\n✅ Simulation test PASSED")
+            # Thêm trường status vào kết quả nếu chưa có
+            if "status" not in data:
+                data["status"] = "success"
             return data
             
         except requests.exceptions.Timeout:
@@ -287,7 +296,7 @@ async def main():
             result = await tester.test_simulation(bot_id, user_prompt, max_turns, history)
             
             # Save results if successful
-            if result.get("status") == "success":
+            if result.get("status") == "success" or (not result.get("error") and result.get("conversation")):
                 tester.save_conversation(result)
                 print("\n✅ All tests completed successfully!")
             else:

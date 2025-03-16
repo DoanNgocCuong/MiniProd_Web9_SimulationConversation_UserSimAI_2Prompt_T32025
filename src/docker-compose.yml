@@ -7,20 +7,30 @@ services:
     image: backend-web-simulation-conv-doanngoccuong:latest
     ports:
       - "25050:25050"
-    command: uvicorn main:app --host 0.0.0.0 --port 25050
     restart: unless-stopped
     container_name: websim-backend
     environment:
-      - CORS_ORIGINS=http://localhost:25051,http://frontend:80,http://103.253.20.13:25051
+      - CORS_ORIGINS=http://localhost:25051,http://frontend:80,http://103.253.20.13:25051,http://103.253.20.13:9404
       - DOCKER=true
       - ENVIRONMENT=production
       - API_BASE_URL=http://103.253.20.13:9404
       - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - websim_logs:/app/logs
       - ./backend/.env:/app/.env
     networks:
       - web-simulation-network
+    command: >
+      bash -c "echo '=== CONTAINER STARTED AT $$(date) ===' > /app/logs/startup.log &&
+               echo 'Environment: DOCKER=$${DOCKER}, API_BASE_URL=$${API_BASE_URL}' >> /app/logs/startup.log &&
+               uvicorn main:app --host 0.0.0.0 --port 25050"
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # Giới hạn 2GB RAM
+        reservations:
+          memory: 512M  # Đảm bảo ít nhất 512MB RAM
 
   frontend:
     build:
