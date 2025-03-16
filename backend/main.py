@@ -5,6 +5,8 @@ import time
 import traceback
 import os
 import sys
+import requests
+import json
 from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -100,6 +102,9 @@ async def api_run_simulation(request: SimulationRequest):
     print("api_run_simulation")
     try:
         start_time = time.time()
+        # Thêm log chi tiết hơn
+        logger.info(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
+        
         result = await run_simulation_with_params(
             bot_id=request.bot_id,
             user_prompt=request.user_prompt,
@@ -112,18 +117,48 @@ async def api_run_simulation(request: SimulationRequest):
     except Exception as e:
         logger.error(f"Simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        # Trả về lỗi chi tiết hơn
+        return {
+            "success": False,
+            "conversation": [],
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+        # raise HTTPException(status_code=500, detail=str(e))
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     logger.info("Health check requested")
+    
+    # Kiểm tra kết nối đến API bên ngoài
+    api_status = "unknown"
+    api_error = None
+    try:
+        api_url = os.environ.get("API_BASE_URL", "http://103.253.20.13:9404")
+        response = requests.get(f"{api_url}/robot-ai-lesson/api/v1/health", timeout=5)
+        if response.status_code == 200:
+            api_status = "connected"
+        else:
+            api_status = f"error: {response.status_code}"
+    except Exception as e:
+        api_status = "error"
+        api_error = str(e)
+    
+    # Kiểm tra OpenAI API key
+    openai_key_status = "set" if os.environ.get("OPENAI_API_KEY") else "missing"
+    
     return {
         "status": "healthy", 
         "service": "simulation-api", 
         "timestamp": time.time(),
         "environment": os.environ.get("ENVIRONMENT", "production"),
-        "python_version": sys.version
+        "python_version": sys.version,
+        "api_connection": api_status,
+        "api_error": api_error,
+        "openai_key": openai_key_status,
+        "hostname": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname())
     }
 
 # Keep the test function for debugging
@@ -145,6 +180,39 @@ async def test_simulation():
     except Exception as e:
         logger.error(f"Test simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
+
+# Add this new endpoint to your main.py file
+@app.post("/simulate")
+async def simulate(data: dict = Body(...)):
+    logger.info(f"Simulate endpoint called with data: {data}")
+    try:
+        # You can either:
+        # 1. Process the data directly here
+        # 2. Or call your existing simulation function
+        
+        # Option 2 example:
+        bot_id = data.get("bot_id")
+        user_prompt = data.get("user_prompt")
+        max_turns = data.get("max_turns", 3)
+        history = data.get("history")
+        
+        result = await run_simulation_with_params(
+            bot_id=bot_id,
+            user_prompt=user_prompt,
+            max_turns=max_turns,
+            history=history
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"Simulation failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "conversation": [],
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
 
 # In Docker, we don't need to find an available port
 # The port is fixed in the Dockerfile and docker-compose.yml
