@@ -491,6 +491,22 @@ You respond extremely briefly.`;
                         msg.timestamp = new Date(baseTime).toISOString();
                     });
                     
+                    // Đảm bảo luôn có ít nhất 2 tin nhắn
+                    if (messages.length === 0) {
+                        messages = [
+                            {
+                                role: 'assistant',
+                                content: 'Xin chào! Bạn thích học về chủ đề gì?',
+                                timestamp: new Date(now.getTime() - 20000).toISOString()
+                            },
+                            {
+                                role: 'user',
+                                content: 'Tớ thích học về động vật.',
+                                timestamp: new Date(now.getTime() - 10000).toISOString()
+                            }
+                        ];
+                    }
+                    
                     return {
                         userInfo: prompt.content,
                         messages: messages,
@@ -499,94 +515,66 @@ You respond extremely briefly.`;
                 });
             };
 
-            // Cập nhật hàm startSimulation để sử dụng dữ liệu mẫu khi không kết nối được
+            // Cập nhật hàm startSimulation với định dạng API đơn giản hơn
             const startSimulation = async () => {
                 if (isSimulating) return;
-
+                
                 // Lấy các prompt đã được chọn
                 const selectedPrompts = userPrompts.filter(prompt => prompt.selected);
                 if (selectedPrompts.length === 0) {
                     alert("Please select at least one prompt to start simulation.");
                     return;
                 }
-
+                
                 setIsSimulating(true);
                 setConversations([]);
                 setSimulationId(null);
                 setDebugData(null);
                 
-                // Kiểm tra xem có kết nối được không
-                if (connectionStatus !== "connected") {
-                    // Nếu không kết nối được, sử dụng dữ liệu mẫu
-                    setTimeout(() => {
-                        const mockData = generateMockData(selectedPrompts);
-                        setConversations(mockData);
-                        setDebugData({ info: "This is mock data. Backend connection is unavailable." });
-                        setIsSimulating(false);
-                    }, 1500); // Thêm độ trễ để giả lập thời gian xử lý
-                    return;
-                }
-                
                 try {
-                    // Chuẩn bị dữ liệu cho request
-                    const requestData = {
-                        client_id: clientIdRef.current,
-                        user_prompts: selectedPrompts.map(prompt => prompt.content),
-                        max_turns: maxTurns
-                    };
-                    
-                    // Thêm agent_prompt hoặc bot_id tùy theo chế độ
-                    if (agentMode === "prompt") {
-                        requestData.agent_prompt = agentPrompt;
-                    } else {
-                        requestData.bot_id = botId;
-                    }
-                    
-                    // Gửi request đến backend
-                    const response = await fetch(`${apiUrl}/simulate`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(requestData),
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log("Simulation response:", data);
-                    
-                    // Cập nhật state với kết quả
-                    if (data.simulation_id) {
-                        setSimulationId(data.simulation_id);
-                    }
-                    
-                    if (data.debug) {
-                        setDebugData(data.debug);
-                    }
-                    
-                    // Tạo và cập nhật conversations
-                    const newConversations = selectedPrompts.map((prompt, index) => {
-                        const userConversation = data.conversations && data.conversations[index];
+                    // Tạo mảng chứa các promise cho nhiều API call
+                    const apiCalls = selectedPrompts.map(async (prompt) => {
+                        // Chuẩn bị dữ liệu cho request theo định dạng mới
+                        const requestData = {
+                            bot_id: botId,
+                            user_prompt: prompt.content, // Sử dụng user_prompt thay vì user_prompts
+                            max_turns: maxTurns
+                        };
+                        
+                        // Gửi request đến API endpoint
+                        const response = await fetch('http://103.253.20.13:25050/simulate', { // URL cố định
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestData),
+                        });
+                        
+                        const data = await response.json();
+                        
                         return {
                             userInfo: prompt.content,
-                            messages: userConversation?.messages || [],
-                            showDetails: false, // Mặc định không hiển thị chi tiết
+                            messages: data.messages || [],
+                            showDetails: false
                         };
                     });
                     
-                    setConversations(newConversations);
+                    // Chờ tất cả các API call hoàn thành
+                    const results = await Promise.all(apiCalls);
+                    setConversations(results);
                 } catch (error) {
                     console.error("Simulation error:", error);
-                    // Nếu có lỗi, sử dụng dữ liệu mẫu
+                    
+                    // Hiển thị thông báo lỗi chi tiết
+                    setDebugData({ 
+                        info: `Error with API: ${error.message}. Using mock data instead.`,
+                        error: error.message,
+                        apiUrl: 'http://103.253.20.13:25050/simulate'
+                    });
+                    
+                    // Sử dụng dữ liệu mẫu khi API lỗi
                     const mockData = generateMockData(selectedPrompts);
                     setConversations(mockData);
-                    setDebugData({ 
-                        info: "Error connecting to backend. Using mock data instead.",
-                        error: error.message
-                    });
                 } finally {
                     setIsSimulating(false);
                 }
@@ -892,7 +880,7 @@ You respond extremely briefly.`;
                                         ) : (
                                             <>
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                                 </svg>
                                                 Start Simulation
                                             </>
@@ -1038,6 +1026,28 @@ You respond extremely briefly.`;
                                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                     </svg>
                                     <span>You are viewing mock data because the backend is not connected.</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Thêm hiển thị thông tin debug nếu có lỗi API */}
+                        {debugData && (
+                            <div className={`mt-4 p-4 rounded-lg ${isDarkMode ? "bg-red-900 text-red-100" : "bg-red-50 text-red-800"}`}>
+                                <div className="flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                    <div>
+                                        <p className="font-medium mb-1">API Information:</p>
+                                        <p className="text-sm mb-1">{debugData.info}</p>
+                                        {debugData.error && (
+                                            <p className="text-sm mb-1">Error: {debugData.error}</p>
+                                        )}
+                                        {debugData.apiUrl && (
+                                            <p className="text-sm mb-1">API URL: {debugData.apiUrl}</p>
+                                        )}
+                                        <p className="text-sm italic mt-2">Viewing mock data as fallback.</p>
+                                    </div>
                                 </div>
                             </div>
                         )}
