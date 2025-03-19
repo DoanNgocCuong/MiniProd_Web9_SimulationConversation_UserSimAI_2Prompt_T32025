@@ -64,27 +64,34 @@ class SimulationRequest(BaseModel):
     user_prompt: str
     max_turns: int = 3
     history: Optional[List[Dict[str, Any]]] = None
-
-# Define API endpoints
-@app.post("/run-simulation")
-async def api_run_simulation(request: SimulationRequest):
-    logger.info(f"Starting simulation with params: {request}")
+# Add this new endpoint to your main.py file
+@app.post("/simulate")
+async def simulate(data: dict = Body(...)):
+    logger.info(f"Simulate endpoint called with data: {data}")
     try:
-        # Thêm log để debug
-        logger.info(f"Starting simulation with params: {request}")
+        # Log chi tiết
+        logger.info(f"Starting simulation with bot_id={data.get('bot_id')}, prompt='{data.get('user_prompt')}'")
+        logger.info(f"Max turns: {data.get('max_turns', 3)}")
+        logger.info(f"History provided: {'Yes' if data.get('history') else 'No'}")
         
         # Tăng timeout cho các request đến API bên ngoài
+        start_time = time.time()
         result = await asyncio.wait_for(
             run_simulation_with_params(
-                bot_id=request.bot_id,
-                user_prompt=request.user_prompt,
-                max_turns=request.max_turns,
-                history=request.history
+                bot_id=data.get("bot_id"),
+                user_prompt=data.get("user_prompt"),
+                max_turns=data.get("max_turns", 3),
+                history=data.get("history")
             ),
             timeout=1800  # Tăng lên 30 phút
         )
+        elapsed_time = time.time() - start_time
         
-        logger.info("Simulation completed successfully")
+        # Log kết quả
+        logger.info(f"Simulation completed in {elapsed_time:.2f} seconds")
+        logger.info(f"Conversation length: {len(result.get('conversation', []))} messages")
+        logger.info(f"Simulation success: {result.get('success', False)}")
+        
         return result
     except asyncio.TimeoutError:
         logger.error("Simulation timed out after 30 minutes")
@@ -102,6 +109,44 @@ async def api_run_simulation(request: SimulationRequest):
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+
+# # Define API endpoints
+# @app.post("/run-simulation")
+# async def api_run_simulation(request: SimulationRequest):
+#     logger.info(f"Starting simulation with params: {request}")
+#     try:
+#         # Thêm log để debug
+#         logger.info(f"Starting simulation with params: {request}")
+        
+#         # Tăng timeout cho các request đến API bên ngoài
+#         result = await asyncio.wait_for(
+#             run_simulation_with_params(
+#                 bot_id=request.bot_id,
+#                 user_prompt=request.user_prompt,
+#                 max_turns=request.max_turns,
+#                 history=request.history
+#             ),
+#             timeout=1800  # Tăng lên 30 phút
+#         )
+        
+#         logger.info("Simulation completed successfully")
+#         return result
+#     except asyncio.TimeoutError:
+#         logger.error("Simulation timed out after 30 minutes")
+#         return {
+#             "success": False,
+#             "conversation": [],
+#             "error": "Simulation timed out after 30 minutes"
+#         }
+#     except Exception as e:
+#         logger.error(f"Simulation failed: {str(e)}")
+#         logger.error(traceback.format_exc())
+#         return {
+#             "success": False,
+#             "conversation": [],
+#             "error": str(e),
+#             "traceback": traceback.format_exc()
+#         }
 
 # Health check endpoint
 @app.get("/health")
@@ -161,51 +206,6 @@ async def test_simulation():
         logger.error(f"Test simulation failed: {str(e)}")
         logger.error(traceback.format_exc())
 
-# Add this new endpoint to your main.py file
-@app.post("/simulate")
-async def simulate(data: dict = Body(...)):
-    logger.info(f"Simulate endpoint called with data: {data}")
-    try:
-        # Log chi tiết
-        logger.info(f"Starting simulation with bot_id={data.get('bot_id')}, prompt='{data.get('user_prompt')}'")
-        logger.info(f"Max turns: {data.get('max_turns', 3)}")
-        logger.info(f"History provided: {'Yes' if data.get('history') else 'No'}")
-        
-        # Tăng timeout cho các request đến API bên ngoài
-        start_time = time.time()
-        result = await asyncio.wait_for(
-            run_simulation_with_params(
-                bot_id=data.get("bot_id"),
-                user_prompt=data.get("user_prompt"),
-                max_turns=data.get("max_turns", 3),
-                history=data.get("history")
-            ),
-            timeout=1800  # Tăng lên 30 phút
-        )
-        elapsed_time = time.time() - start_time
-        
-        # Log kết quả
-        logger.info(f"Simulation completed in {elapsed_time:.2f} seconds")
-        logger.info(f"Conversation length: {len(result.get('conversation', []))} messages")
-        logger.info(f"Simulation success: {result.get('success', False)}")
-        
-        return result
-    except asyncio.TimeoutError:
-        logger.error("Simulation timed out after 30 minutes")
-        return {
-            "success": False,
-            "conversation": [],
-            "error": "Simulation timed out after 30 minutes"
-        }
-    except Exception as e:
-        logger.error(f"Simulation failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "conversation": [],
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
 
 # Hàm ghi log chi tiết
 def log_step(message, level="INFO"):
@@ -234,6 +234,48 @@ log_step(f"Python version: {sys.version}")
 log_step(f"Current directory: {os.getcwd()}")
 log_step(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
 log_step(f"API_BASE_URL: {os.environ.get('API_BASE_URL', 'Not set')}")
+
+
+    
+@app.post("/check-dod-gen-feedback")
+async def check_dod():
+    try:
+        response = requests.post(
+            "http://103.253.20.13:5011/v1/workflows/run",
+            headers={
+                "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
+                "Content-Type": "application/json"
+            },
+            json={
+                "inputs": {
+                    "conversation": "Pika: chào cậu",
+                    "DoD": "abv"
+                },
+                "response_mode": "blocking",
+                "user": "abc-123"
+            },
+            timeout=1800  # 30 minutes
+        )
+        return {
+            "status": response.status_code,
+            "content": response.json(),  # Convert response text to JSON
+            "time": time.time()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/debug")
+async def debug():
+    return {
+        "status": "running",
+        "time": time.time(),
+        "environment": os.environ.get("ENVIRONMENT", "development"),
+        "python_version": sys.version,
+        "hostname": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname())
+    }
+
 
 # In Docker, we don't need to find an available port
 # The port is fixed in the Dockerfile and docker-compose.yml
@@ -277,60 +319,4 @@ if __name__ == "__main__":
             print("Please install required dependencies:")
             print("pip install fastapi uvicorn typing-extensions")
 
-@app.get("/test-api-connection")
-async def test_api_connection():
-    try:
-        response = requests.post(
-            "http://103.253.20.13:9404/robot-ai-lesson/api/v1/bot/initConversation",
-            headers={'Content-Type': 'application/json'},
-            json={"bot_id": 16, "conversation_id": "test", "input_slots": {}},
-            timeout=1800  # Tăng lên 30 phút
-        )
-        return {
-            "status": response.status_code,
-            "content": response.text,
-            "time": time.time()
-        }
-    except Exception as e:
-        return {"error": str(e)}
-    
 
-@app.post("/check-dod")
-async def check_dod():
-    try:
-        response = requests.post(
-            "http://103.253.20.13:5011/v1/workflows/run",
-            headers={
-                "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
-                "Content-Type": "application/json",
-                "X-API-Key": "{{token}}"
-            },
-            json={
-                "inputs": {
-                    "conversation": "Pika: chào cậu",
-                    "DoD": "abv"
-                },
-                "response_mode": "blocking",
-                "user": "abc-123"
-            },
-            timeout=1800  # 30 minutes
-        )
-        return {
-            "status": response.status_code,
-            "content": response.json(),  # Convert response text to JSON
-            "time": time.time()
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@app.get("/debug")
-async def debug():
-    return {
-        "status": "running",
-        "time": time.time(),
-        "environment": os.environ.get("ENVIRONMENT", "development"),
-        "python_version": sys.version,
-        "hostname": socket.gethostname(),
-        "ip": socket.gethostbyname(socket.gethostname())
-    }

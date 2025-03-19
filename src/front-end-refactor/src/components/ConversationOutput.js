@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { genFeedback } from './genFeedback';
 
 const ConversationOutput = ({
     conversations,
@@ -7,8 +8,41 @@ const ConversationOutput = ({
     startSimulation,
     isSimulating,
     userPrompts,
-    formatTime
+    formatTime,
+    dod
 }) => {
+    const [conversationsState, setConversations] = useState(conversations);
+
+    // Thêm log để kiểm tra dod
+    useEffect(() => {
+        console.log('=== ConversationOutput Props ===');
+        console.log('DoD received:', dod);
+        console.log('=========================');
+    }, [dod]);
+
+    // Theo dõi thay đổi của conversations để tự động gen feedback
+    useEffect(() => {
+        if (conversations.length > 0 && !isSimulating) {
+            // Tự động gen feedback cho các conversation mới
+            conversations.forEach(async (conversation) => {
+                if (!conversation.result) {
+                    await generateFeedback(conversation);
+                }
+            });
+        }
+        setConversations(conversations);
+    }, [conversations, isSimulating]);
+
+    const generateFeedback = async (conversation) => {
+        try {
+            const feedback = await genFeedback(conversation, dod);
+            conversation.result = feedback;
+            setConversations([...conversationsState]);
+        } catch (error) {
+            console.error('Error generating feedback:', error);
+        }
+    };
+
     return (
         <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-4 flex-1 flex flex-col`}
             style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
@@ -72,28 +106,28 @@ const ConversationOutput = ({
                                     }`}
                                 >
                                     {/* Result Box */}
-                                    <div className={`p-3 rounded-t-xl border-b ${
-                                        isDarkMode 
-                                            ? 'bg-gray-800/50 border-gray-700' 
-                                            : 'bg-gray-50/80 border-gray-200'
-                                    }`}>
+                                    <div className="p-3 rounded-t-xl border-b bg-gray-800/50 border-gray-700">
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                                                 conversation?.result?.status === 'pass'
-                                                    ? isDarkMode 
-                                                        ? 'bg-green-900/50 text-green-300'
-                                                        : 'bg-green-100 text-green-700'
-                                                    : isDarkMode
-                                                        ? 'bg-red-900/50 text-red-300'
-                                                        : 'bg-red-100 text-red-700'
+                                                    ? 'bg-green-900/50 text-green-300'
+                                                    : 'bg-red-900/50 text-red-300'
                                             }`}>
-                                                {conversation?.result?.status === 'pass' ? 'PASS' : 'FAIL'}
+                                                {conversation?.result?.status?.toUpperCase() || 'PENDING'}
                                             </span>
-                                            <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                            <span className="text-sm text-gray-300">
                                                 Score: {conversation?.result?.score || 0}/100
                                             </span>
+                                            {!isSimulating && (
+                                                <button
+                                                    onClick={() => generateFeedback(conversation)}
+                                                    className="px-2 py-1 text-xs rounded-full bg-blue-900/50 text-blue-300 hover:bg-blue-800/50"
+                                                >
+                                                    {conversation.result ? 'Regenerate Feedback' : 'Generate Feedback'}
+                                                </button>
+                                            )}
                                         </div>
-                                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                        <p className="text-sm text-gray-400">
                                             {conversation?.result?.explanation || 'Waiting for analysis...'}
                                         </p>
                                     </div>

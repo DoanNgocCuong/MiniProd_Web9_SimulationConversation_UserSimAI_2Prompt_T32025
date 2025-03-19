@@ -282,7 +282,7 @@ function App() {
                 // Thêm local CORS proxy nếu đang chạy trên localhost
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     // apiEndpoint = `http://localhost:8080/${apiEndpoint}`;
-                    apiEndpoint = 'http://localhost:8080/simulate'
+                    apiEndpoint = 'http://localhost:25050/simulate'
                 }
 
                 const response = await fetch(apiEndpoint, {
@@ -422,6 +422,7 @@ function App() {
                         isSimulating={isSimulating}
                         userPrompts={userPrompts}
                         formatTime={formatTime}
+                        dod={dod}
                     />
                 </div>
             </div>
