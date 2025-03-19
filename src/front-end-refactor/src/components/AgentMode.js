@@ -10,7 +10,17 @@ const AgentMode = ({
     agentPrompt,
     setAgentPrompt,
     isSimulating,
-    isDarkMode
+    isDarkMode,
+    dod,
+    setDod,
+    hypothesis,
+    setHypothesis,
+    designGoal,
+    setDesignGoal,
+    keyAssumption,
+    setKeyAssumption,
+    measurementMetric,
+    setMeasurementMetric
 }) => {
     return (
         <div className={`backdrop-blur-xl bg-opacity-80 p-4 rounded-2xl shadow-xl mb-4 transform transition-all duration-300 hover:shadow-2xl`}
@@ -106,6 +116,80 @@ const AgentMode = ({
                         />
                     </div>
                 )}
+
+                {/* New Textarea Fields */}
+                <div className="mt-4 space-y-2">
+                    <div>
+                        <label className={`block mb-1 text-sm ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                            DoD:
+                        </label>
+                        <textarea
+                            value={dod}
+                            onChange={(e) => setDod(e.target.value)}
+                            placeholder="Enter DoD"
+                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                }`}
+                            rows="3"
+                            disabled={isSimulating}
+                        />
+                    </div>
+                    <div>
+                        <label className={`block mb-1 text-sm ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                            Hypothesis:
+                        </label>
+                        <textarea
+                            value={hypothesis}
+                            onChange={(e) => setHypothesis(e.target.value)}
+                            placeholder="Enter Hypothesis"
+                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                }`}
+                            rows="3"
+                            disabled={isSimulating}
+                        />
+                    </div>
+                    <div>
+                        <label className={`block mb-1 text-sm ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                            Mục tiêu thiết kế:
+                        </label>
+                        <textarea
+                            value={designGoal}
+                            onChange={(e) => setDesignGoal(e.target.value)}
+                            placeholder="Enter Design Goal"
+                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                }`}
+                            rows="3"
+                            disabled={isSimulating}
+                        />
+                    </div>
+                    <div>
+                        <label className={`block mb-1 text-sm ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                            Giả định chính:
+                        </label>
+                        <textarea
+                            value={keyAssumption}
+                            onChange={(e) => setKeyAssumption(e.target.value)}
+                            placeholder="Enter Key Assumption"
+                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                }`}
+                            rows="3"
+                            disabled={isSimulating}
+                        />
+                    </div>
+                    <div>
+                        <label className={`block mb-1 text-sm ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+                            Chỉ số đo lường:
+                        </label>
+                        <textarea
+                            value={measurementMetric}
+                            onChange={(e) => setMeasurementMetric(e.target.value)}
+                            placeholder="Enter Measurement Metric"
+                            className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
+                                }`}
+                            rows="3"
+                            disabled={isSimulating}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -160,6 +160,11 @@ function App() {
     const [debugData, setDebugData] = React.useState(null);
     const [editingPrompt, setEditingPrompt] = React.useState(null);
     const [showAllPrompts, setShowAllPrompts] = React.useState(false);
+    const [dod, setDod] = React.useState("");
+    const [hypothesis, setHypothesis] = React.useState("");
+    const [designGoal, setDesignGoal] = React.useState("");
+    const [keyAssumption, setKeyAssumption] = React.useState("");
+    const [measurementMetric, setMeasurementMetric] = React.useState("");
 
     // Cập nhật danh sách Bot ID hợp lệ
     const validBotIds = [16, 17, 18, 19, 20]; // Thêm các Bot ID khác nếu biết
@@ -360,11 +365,11 @@ function App() {
 
     return (
         <div className={`min-h-screen ${isDarkMode ? "bg-gradient-to-b from-gray-900 to-gray-800 dark" : "bg-gradient-to-b from-gray-50 to-white"} text-gray-900`}>
-            <Header
+            {/* <Header
                 isDarkMode={isDarkMode}
                 setIsDarkMode={setIsDarkMode}
                 connectionStatus={connectionStatus}
-            />
+            /> */}
 
             <div className="flex w-full">
                 {/* Agent Mode Section - Left 1/4 of the screen */}
@@ -380,6 +385,16 @@ function App() {
                         setAgentPrompt={setAgentPrompt}
                         isSimulating={isSimulating}
                         isDarkMode={isDarkMode}
+                        dod={dod}
+                        setDod={setDod}
+                        hypothesis={hypothesis}
+                        setHypothesis={setHypothesis}
+                        designGoal={designGoal}
+                        setDesignGoal={setDesignGoal}
+                        keyAssumption={keyAssumption}
+                        setKeyAssumption={setKeyAssumption}
+                        measurementMetric={measurementMetric}
+                        setMeasurementMetric={setMeasurementMetric}
                     />
                 </div>
 

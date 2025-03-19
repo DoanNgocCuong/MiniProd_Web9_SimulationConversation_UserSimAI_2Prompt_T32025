@@ -10,7 +10,7 @@ const ConversationOutput = ({
     formatTime
 }) => {
     return (
-        <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl mb-6 transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-8`}
+        <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-8 flex-1 flex flex-col`}
             style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
         >
             <div className="flex justify-between items-center mb-4">
@@ -59,75 +59,78 @@ const ConversationOutput = ({
                 </div>
             </div>
 
-            {/* Hiển thị kết quả mô phỏng */}
+            {/* Conversation section with horizontal scroll */}
             {conversations.length > 0 ? (
-                <div className="max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {conversations.map((conversation, index) => (
-                            <div
-                                key={index}
-                                className={`h-[400px] flex flex-col rounded-xl shadow-md transition-all ${isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
+                <div className="flex-1 overflow-y-hidden">
+                    <div className="h-full overflow-x-auto overflow-y-auto">
+                        <div className="inline-flex gap-4 p-2">
+                            {conversations.map((conversation, index) => (
+                                <div
+                                    key={index}
+                                    className={`w-[400px] h-[calc(100vh-500px)] flex-shrink-0 flex flex-col rounded-xl shadow-md transition-all ${
+                                        isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
                                     }`}
-                            >
-                                {/* Header với thông tin người dùng */}
-                                <div className={`p-3 rounded-t-xl flex items-center gap-2 ${isDarkMode ? "bg-gray-700/50" : "bg-gray-100/80"
-                                    }`}>
-                                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-blue-500">
-                                        <img
-                                            src="./images/baby.png"
-                                            alt={`User ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                e.target.onerror = null;
-                                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className={`font-medium truncate ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                                            {conversation.userInfo?.split('\n')[1]?.trim() || `User ${index + 1}`}
-                                        </h4>
-                                        <p className={`text-xs truncate ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
-                                            {conversation.userInfo?.split('\n')[2]?.replace('Age & Level:', '').trim() || "Unknown level"}
-                                        </p>
-                                    </div>
-                                    <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? "bg-blue-900/50 text-blue-200" : "bg-blue-100 text-blue-800"
+                                >
+                                    {/* Header với thông tin người dùng */}
+                                    <div className={`p-3 rounded-t-xl flex items-center gap-2 ${isDarkMode ? "bg-gray-700/50" : "bg-gray-100/80"
                                         }`}>
-                                        {conversation.messages?.length || 0} msgs
+                                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-blue-500">
+                                            <img
+                                                src="./images/baby.png"
+                                                alt={`User ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='%23aaa'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className={`font-medium truncate ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                                                {conversation.userInfo?.split('\n')[1]?.trim() || `User ${index + 1}`}
+                                            </h4>
+                                            <p className={`text-xs truncate ${isDarkMode ? "text-gray-300" : "text-gray-500"}`}>
+                                                {conversation.userInfo?.split('\n')[2]?.replace('Age & Level:', '').trim() || "Unknown level"}
+                                            </p>
+                                        </div>
+                                        <div className={`text-xs px-2 py-1 rounded-full ${isDarkMode ? "bg-blue-900/50 text-blue-200" : "bg-blue-100 text-blue-800"
+                                            }`}>
+                                            {conversation.messages?.length || 0} msgs
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Khu vực tin nhắn */}
-                                <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar"
-                                    style={{ backgroundColor: isDarkMode ? "rgba(17, 24, 39, 0.7)" : "rgba(249, 250, 251, 0.7)" }}>
-                                    {conversation.messages?.map((msg, msgIndex) => (
-                                        <div key={msgIndex} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] p-2.5 rounded-2xl text-sm ${msg.role === 'user'
-                                                    ? isDarkMode ? 'bg-blue-800 text-white' : 'bg-blue-500 text-white'
-                                                    : isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
-                                                }`}>
-                                                <div className="whitespace-pre-wrap">{msg.content}</div>
-                                                <div className={`text-xs mt-1 ${msg.role === 'user'
-                                                        ? isDarkMode ? 'text-blue-300' : 'text-blue-100'
-                                                        : isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                    {/* Khu vực tin nhắn */}
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar"
+                                        style={{ backgroundColor: isDarkMode ? "rgba(17, 24, 39, 0.7)" : "rgba(249, 250, 251, 0.7)" }}>
+                                        {conversation.messages?.map((msg, msgIndex) => (
+                                            <div key={msgIndex} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-2.5 rounded-2xl text-sm ${msg.role === 'user'
+                                                        ? isDarkMode ? 'bg-blue-800 text-white' : 'bg-blue-500 text-white'
+                                                        : isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'
                                                     }`}>
-                                                    {formatTime(msg.timestamp)}
+                                                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                                                    <div className={`text-xs mt-1 ${msg.role === 'user'
+                                                            ? isDarkMode ? 'text-blue-300' : 'text-blue-100'
+                                                            : isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                        }`}>
+                                                        {formatTime(msg.timestamp)}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
 
-                                {/* Footer với thông tin tổng kết */}
-                                <div className={`p-2 text-xs border-t ${isDarkMode ? "border-gray-700 bg-gray-800 text-gray-400" : "border-gray-200 bg-gray-50 text-gray-500"
-                                    }`}>
-                                    <div className="flex justify-between">
-                                        <span>Tổng lượt: {conversation.messages?.length || 0}</span>
-                                        <span>Cập nhật: {conversation.messages?.length > 0 ? formatTime(conversation.messages[conversation.messages.length - 1].timestamp) : "N/A"}</span>
+                                    {/* Footer với thông tin tổng kết */}
+                                    <div className={`p-2 text-xs border-t ${isDarkMode ? "border-gray-700 bg-gray-800 text-gray-400" : "border-gray-200 bg-gray-50 text-gray-500"
+                                        }`}>
+                                        <div className="flex justify-between">
+                                            <span>Tổng lượt: {conversation.messages?.length || 0}</span>
+                                            <span>Cập nhật: {conversation.messages?.length > 0 ? formatTime(conversation.messages[conversation.messages.length - 1].timestamp) : "N/A"}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             ) : (
