@@ -293,6 +293,36 @@ async def test_api_connection():
         }
     except Exception as e:
         return {"error": str(e)}
+    
+
+@app.post("/check-dod")
+async def check_dod():
+    try:
+        response = requests.post(
+            "http://103.253.20.13:5011/v1/workflows/run",
+            headers={
+                "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
+                "Content-Type": "application/json",
+                "X-API-Key": "{{token}}"
+            },
+            json={
+                "inputs": {
+                    "conversation": "Pika: chào cậu",
+                    "DoD": "abv"
+                },
+                "response_mode": "blocking",
+                "user": "abc-123"
+            },
+            timeout=1800  # 30 minutes
+        )
+        return {
+            "status": response.status_code,
+            "content": response.json(),  # Convert response text to JSON
+            "time": time.time()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 
 @app.get("/debug")
 async def debug():
