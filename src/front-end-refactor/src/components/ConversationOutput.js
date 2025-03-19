@@ -10,7 +10,7 @@ const ConversationOutput = ({
     formatTime
 }) => {
     return (
-        <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-8 flex-1 flex flex-col`}
+        <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-4 flex-1 flex flex-col`}
             style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
         >
             <div className="flex justify-between items-center mb-4">
@@ -71,9 +71,37 @@ const ConversationOutput = ({
                                         isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
                                     }`}
                                 >
+                                    {/* Result Box */}
+                                    <div className={`p-3 rounded-t-xl border-b ${
+                                        isDarkMode 
+                                            ? 'bg-gray-800/50 border-gray-700' 
+                                            : 'bg-gray-50/80 border-gray-200'
+                                    }`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                conversation?.result?.status === 'pass'
+                                                    ? isDarkMode 
+                                                        ? 'bg-green-900/50 text-green-300'
+                                                        : 'bg-green-100 text-green-700'
+                                                    : isDarkMode
+                                                        ? 'bg-red-900/50 text-red-300'
+                                                        : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {conversation?.result?.status === 'pass' ? 'PASS' : 'FAIL'}
+                                            </span>
+                                            <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                Score: {conversation?.result?.score || 0}/100
+                                            </span>
+                                        </div>
+                                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                            {conversation?.result?.explanation || 'Waiting for analysis...'}
+                                        </p>
+                                    </div>
+
                                     {/* Header với thông tin người dùng */}
-                                    <div className={`p-3 rounded-t-xl flex items-center gap-2 ${isDarkMode ? "bg-gray-700/50" : "bg-gray-100/80"
-                                        }`}>
+                                    <div className={`p-3 flex items-center gap-2 ${
+                                        isDarkMode ? "bg-gray-700/50" : "bg-gray-100/80"
+                                    }`}>
                                         <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-blue-500">
                                             <img
                                                 src="./images/baby.png"

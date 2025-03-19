@@ -111,7 +111,7 @@ const AgentMode = ({
                             placeholder="Enter Agent Prompt"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>
@@ -129,7 +129,7 @@ const AgentMode = ({
                             placeholder="Enter DoD"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>
@@ -143,7 +143,7 @@ const AgentMode = ({
                             placeholder="Enter Hypothesis"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>
@@ -157,7 +157,7 @@ const AgentMode = ({
                             placeholder="Enter Design Goal"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>
@@ -171,7 +171,7 @@ const AgentMode = ({
                             placeholder="Enter Key Assumption"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>
@@ -185,7 +185,7 @@ const AgentMode = ({
                             placeholder="Enter Measurement Metric"
                             className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none text-sm ${isDarkMode ? "bg-gray-700/50 border-gray-600 text-white" : "bg-white/50 border-gray-200 text-black"
                                 }`}
-                            rows="3"
+                            rows="5"
                             disabled={isSimulating}
                         />
                     </div>

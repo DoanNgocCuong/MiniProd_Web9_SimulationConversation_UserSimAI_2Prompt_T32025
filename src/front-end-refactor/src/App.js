@@ -281,7 +281,8 @@ function App() {
 
                 // Thêm local CORS proxy nếu đang chạy trên localhost
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    apiEndpoint = `http://localhost:8080/${apiEndpoint}`;
+                    // apiEndpoint = `http://localhost:8080/${apiEndpoint}`;
+                    apiEndpoint = 'http://localhost:8080/simulate'
                 }
 
                 const response = await fetch(apiEndpoint, {
@@ -412,7 +413,6 @@ function App() {
                         showAllPrompts={showAllPrompts}
                         setShowAllPrompts={setShowAllPrompts}
                     />
-
                     {/* Conversation Output Section */}
                     <ConversationOutput
                         conversations={conversations}
