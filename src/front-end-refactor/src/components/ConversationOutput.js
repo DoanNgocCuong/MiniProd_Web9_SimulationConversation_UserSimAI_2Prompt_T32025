@@ -1,4 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+const checkDoD = async (dod, conversation) => {
+    try {
+        const response = await fetch('http://your-backend-url/check-dod', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ dod, conversation }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to check DoD');
+        }
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('Error checking DoD:', error);
+        return null;
+    }
+};
 
 const ConversationOutput = ({
     conversations,
@@ -7,8 +29,25 @@ const ConversationOutput = ({
     startSimulation,
     isSimulating,
     userPrompts,
-    formatTime
+    formatTime,
+    dod
 }) => {
+    const [updatedConversations, setUpdatedConversations] = useState(conversations);
+
+    useEffect(() => {
+        const updateConversationsWithDoD = async () => {
+            const updated = await Promise.all(conversations.map(async (conversation) => {
+                const result = await checkDoD(dod, conversation);
+                return { ...conversation, result };
+            }));
+            setUpdatedConversations(updated);
+        };
+
+        if (conversations.length > 0) {
+            updateConversationsWithDoD();
+        }
+    }, [conversations, dod]);
+
     return (
         <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-4 flex-1 flex flex-col`}
             style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
@@ -60,11 +99,11 @@ const ConversationOutput = ({
             </div>
 
             {/* Conversation section with horizontal scroll */}
-            {conversations.length > 0 ? (
+            {updatedConversations.length > 0 ? (
                 <div className="flex-1 overflow-y-hidden">
                     <div className="h-full overflow-x-auto overflow-y-auto">
                         <div className="inline-flex gap-4 p-2">
-                            {conversations.map((conversation, index) => (
+                            {updatedConversations.map((conversation, index) => (
                                 <div
                                     key={index}
                                     className={`w-[400px] h-[calc(100vh-500px)] flex-shrink-0 flex flex-col rounded-xl shadow-md transition-all ${

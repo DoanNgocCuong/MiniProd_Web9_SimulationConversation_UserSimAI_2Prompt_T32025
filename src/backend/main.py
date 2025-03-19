@@ -303,7 +303,6 @@ async def check_dod():
             headers={
                 "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
                 "Content-Type": "application/json",
-                "X-API-Key": "{{token}}"
             },
             json={
                 "inputs": {
