@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import UserPrompts from './components/UserPrompts'; // Import the new component
 import ConversationOutput from './components/ConversationOutput'; // Import the new component
@@ -364,6 +364,30 @@ function App() {
         );
     };
 
+    const handleUpdatePrompts = (newPrompts) => {
+        console.log('handleUpdatePrompts called in App.js:', {
+            currentPromptsCount: userPrompts.length,
+            newPromptsCount: newPrompts.length,
+            firstPromptPreview: newPrompts[0]?.content.substring(0, 50) + '...'
+        });
+
+        // So sánh prompts cũ và mới
+        const changedPrompts = newPrompts.filter((newPrompt, index) => 
+            newPrompt.content !== userPrompts[index].content
+        );
+        
+        console.log('Changed prompts:', {
+            count: changedPrompts.length,
+            changes: changedPrompts.map(p => ({
+                id: p.id,
+                newContent: p.content.substring(0, 50) + '...'
+            }))
+        });
+
+        setUserPrompts(newPrompts);
+        console.log('State updated in App.js');
+    };
+
     return (
         <div className={`min-h-screen ${isDarkMode ? "bg-gradient-to-b from-gray-900 to-gray-800 dark" : "bg-gradient-to-b from-gray-50 to-white"} text-gray-900`}>
             {/* <Header
@@ -412,6 +436,7 @@ function App() {
                         isDarkMode={isDarkMode}
                         showAllPrompts={showAllPrompts}
                         setShowAllPrompts={setShowAllPrompts}
+                        onUpdatePrompts={handleUpdatePrompts}
                     />
                     {/* Conversation Output Section */}
                     <ConversationOutput

@@ -1,57 +1,71 @@
+// Import các thư viện cần thiết từ React và component genFeedback
 import React, { useState, useEffect } from 'react';
 import { genFeedback } from './genFeedback';
 
+// Định nghĩa component ConversationOutput nhận vào các props
 const ConversationOutput = ({
-    conversations,
-    isDarkMode,
-    resetSimulation,
-    startSimulation,
-    isSimulating,
-    userPrompts,
-    formatTime,
-    dod
+    conversations, // Danh sách các cuộc hội thoại
+    isDarkMode, // Trạng thái dark mode
+    resetSimulation, // Hàm reset lại mô phỏng
+    startSimulation, // Hàm bắt đầu mô phỏng
+    isSimulating, // Trạng thái đang mô phỏng
+    userPrompts, // Danh sách các prompt người dùng
+    formatTime, // Hàm format thời gian
+    dod // Định nghĩa về độ khó (Definition of Done)
 }) => {
+    // Khởi tạo state để lưu trữ conversations
     const [conversationsState, setConversations] = useState(conversations);
 
-    // Thêm log để kiểm tra dod
+    // useEffect để log ra dod mỗi khi nó thay đổi
     useEffect(() => {
         console.log('=== ConversationOutput Props ===');
         console.log('DoD received:', dod);
         console.log('=========================');
     }, [dod]);
 
-    // Theo dõi thay đổi của conversations để tự động gen feedback
+    // useEffect theo dõi thay đổi của conversations để tự động tạo feedback
     useEffect(() => {
+        // Kiểm tra có conversations và không đang trong quá trình mô phỏng
         if (conversations.length > 0 && !isSimulating) {
-            // Tự động gen feedback cho các conversation mới
+            // Duyệt qua từng conversation để tạo feedback
             conversations.forEach(async (conversation) => {
+                // Chỉ tạo feedback cho conversation chưa có kết quả
                 if (!conversation.result) {
                     await generateFeedback(conversation);
                 }
             });
         }
+        // Cập nhật state conversations
         setConversations(conversations);
     }, [conversations, isSimulating]);
 
+    // Hàm tạo feedback cho một conversation
     const generateFeedback = async (conversation) => {
         try {
+            // Gọi API để tạo feedback
             const feedback = await genFeedback(conversation, dod);
+            // Gán kết quả feedback vào conversation
             conversation.result = feedback;
+            // Cập nhật state để render lại UI
             setConversations([...conversationsState]);
         } catch (error) {
-            console.error('Error generating feedback:', error);
+            console.error('Lỗi khi tạo phản hồi:', error);
         }
     };
 
+    // Render giao diện chính của component
     return (
+        // Container chính với hiệu ứng blur và màu nền tùy thuộc dark mode
         <div className={`backdrop-blur-xl bg-opacity-80 p-5 rounded-2xl shadow-xl transform transition-all duration-300 hover:shadow-2xl animate-fade-in mt-4 flex-1 flex flex-col`}
             style={{ backgroundColor: isDarkMode ? "rgba(26, 26, 26, 0.8)" : "rgba(255, 255, 255, 0.8)" }}
         >
+            {/* Phần header chứa tiêu đề và các nút điều khiển */}
             <div className="flex justify-between items-center mb-4">
                 <h2 className={`text-xl font-semibold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-                    Conversation Output
+                    Kết quả cuộc trò chuyện
                 </h2>
                 <div className="flex gap-2">
+                    {/* Nút Reset để làm mới mô phỏng */}
                     <button
                         onClick={resetSimulation}
                         className={`px-4 py-2 rounded-full ${isDarkMode
@@ -65,6 +79,7 @@ const ConversationOutput = ({
                         </svg>
                         Reset
                     </button>
+                    {/* Nút Start để bắt đầu mô phỏng */}
                     <button
                         onClick={startSimulation}
                         className={`px-4 py-2 rounded-full ${isDarkMode
@@ -73,31 +88,34 @@ const ConversationOutput = ({
                             } text-white flex items-center gap-2 transition-all hover-scale active-scale`}
                         disabled={isSimulating || !userPrompts.some(p => p.selected)}
                     >
+                        {/* Hiển thị spinner khi đang mô phỏng */}
                         {isSimulating ? (
                             <>
                                 <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Simulating...
+                                Đang mô phỏng...
                             </>
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                 </svg>
-                                Start Simulation
+                                Bắt đầu mô phỏng
                             </>
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* Conversation section with horizontal scroll */}
+            {/* Phần hiển thị danh sách conversations */}
             {conversations.length > 0 ? (
+                // Container cho phép scroll ngang
                 <div className="flex-1 overflow-y-hidden">
                     <div className="h-full overflow-x-auto overflow-y-auto">
                         <div className="inline-flex gap-4 p-2">
+                            {/* Map qua từng conversation để hiển thị */}
                             {conversations.map((conversation, index) => (
                                 <div
                                     key={index}
@@ -105,7 +123,7 @@ const ConversationOutput = ({
                                         isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
                                     }`}
                                 >
-                                    {/* Result Box */}
+                                    {/* Phần hiển thị kết quả đánh giá */}
                                     <div className="p-3 rounded-t-xl border-b bg-gray-800/50 border-gray-700">
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -118,6 +136,7 @@ const ConversationOutput = ({
                                             <span className="text-sm text-gray-300">
                                                 Score: {conversation?.result?.score || 0}/100
                                             </span>
+                                            {/* Nút tạo lại feedback */}
                                             {!isSimulating && (
                                                 <button
                                                     onClick={() => generateFeedback(conversation)}
@@ -132,7 +151,7 @@ const ConversationOutput = ({
                                         </p>
                                     </div>
 
-                                    {/* Header với thông tin người dùng */}
+                                    {/* Phần header hiển thị thông tin người dùng */}
                                     <div className={`p-3 flex items-center gap-2 ${
                                         isDarkMode ? "bg-gray-700/50" : "bg-gray-100/80"
                                     }`}>
@@ -161,7 +180,7 @@ const ConversationOutput = ({
                                         </div>
                                     </div>
 
-                                    {/* Khu vực tin nhắn */}
+                                    {/* Phần hiển thị các tin nhắn trong cuộc hội thoại */}
                                     <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar"
                                         style={{ backgroundColor: isDarkMode ? "rgba(17, 24, 39, 0.7)" : "rgba(249, 250, 251, 0.7)" }}>
                                         {conversation.messages?.map((msg, msgIndex) => (
@@ -182,7 +201,7 @@ const ConversationOutput = ({
                                         ))}
                                     </div>
 
-                                    {/* Footer với thông tin tổng kết */}
+                                    {/* Footer hiển thị thông tin tổng kết */}
                                     <div className={`p-2 text-xs border-t ${isDarkMode ? "border-gray-700 bg-gray-800 text-gray-400" : "border-gray-200 bg-gray-50 text-gray-500"
                                         }`}>
                                         <div className="flex justify-between">
@@ -196,6 +215,7 @@ const ConversationOutput = ({
                     </div>
                 </div>
             ) : (
+                // Hiển thị trạng thái trống khi chưa có conversations
                 <div className={`flex flex-col items-center justify-center py-16 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
