@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from def_simulation import run_simulation_with_params
+from utils import read_user_prompts
 
 # Thiết lập logging chi tiết
 logging.basicConfig(
@@ -41,6 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/get-prompts")
+async def get_prompts():
+    file_path = "user_prompts.txt"  # Path to your text file
+    prompts = read_user_prompts(file_path)
+    return {"prompts": prompts}
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -64,7 +72,12 @@ class SimulationRequest(BaseModel):
     user_prompt: str
     max_turns: int = 3
     history: Optional[List[Dict[str, Any]]] = None
-# Add this new endpoint to your main.py file
+
+class PromptUpdate(BaseModel):
+    id: int
+    name: str
+    content: str
+
 @app.post("/simulate")
 async def simulate(data: dict = Body(...)):
     logger.info(f"Simulate endpoint called with data: {data}")
@@ -109,44 +122,6 @@ async def simulate(data: dict = Body(...)):
             "error": str(e),
             "traceback": traceback.format_exc()
         }
-
-# # Define API endpoints
-# @app.post("/run-simulation")
-# async def api_run_simulation(request: SimulationRequest):
-#     logger.info(f"Starting simulation with params: {request}")
-#     try:
-#         # Thêm log để debug
-#         logger.info(f"Starting simulation with params: {request}")
-        
-#         # Tăng timeout cho các request đến API bên ngoài
-#         result = await asyncio.wait_for(
-#             run_simulation_with_params(
-#                 bot_id=request.bot_id,
-#                 user_prompt=request.user_prompt,
-#                 max_turns=request.max_turns,
-#                 history=request.history
-#             ),
-#             timeout=1800  # Tăng lên 30 phút
-#         )
-        
-#         logger.info("Simulation completed successfully")
-#         return result
-#     except asyncio.TimeoutError:
-#         logger.error("Simulation timed out after 30 minutes")
-#         return {
-#             "success": False,
-#             "conversation": [],
-#             "error": "Simulation timed out after 30 minutes"
-#         }
-#     except Exception as e:
-#         logger.error(f"Simulation failed: {str(e)}")
-#         logger.error(traceback.format_exc())
-#         return {
-#             "success": False,
-#             "conversation": [],
-#             "error": str(e),
-#             "traceback": traceback.format_exc()
-#         }
 
 # Health check endpoint
 @app.get("/health")
@@ -320,3 +295,66 @@ if __name__ == "__main__":
             print("pip install fastapi uvicorn typing-extensions")
 
 
+@app.post("/check-dod")
+async def check_dod():
+    try:
+        response = requests.post(
+            "http://103.253.20.13:5011/v1/workflows/run",
+            headers={
+                "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
+                "Content-Type": "application/json",
+            },
+            json={
+                "inputs": {
+                    "conversation": "Pika: chào cậu",
+                    "DoD": "abv"
+                },
+                "response_mode": "blocking",
+                "user": "abc-123"
+            },
+            timeout=1800  # 30 minutes
+        )
+        return {
+            "status": response.status_code,
+            "content": response.json(),  # Convert response text to JSON
+            "time": time.time()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/debug")
+async def debug():
+    return {
+        "status": "running",
+        "time": time.time(),
+        "environment": os.environ.get("ENVIRONMENT", "development"),
+        "python_version": sys.version,
+        "hostname": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname())
+    }
+
+@app.post("/update-prompt")
+async def update_prompt(prompt_update: PromptUpdate):
+    file_path = "user_prompts.txt"
+    try:
+        # Read existing prompts
+        prompts = read_user_prompts(file_path)
+        
+        # Update the specific prompt
+        for prompt in prompts:
+            if prompt['id'] == prompt_update.id:
+                prompt['name'] = prompt_update.name
+                prompt['content'] = prompt_update.content
+                break
+        else:
+            raise HTTPException(status_code=404, detail="Prompt not found")
+
+        # Write back to the file
+        with open(file_path, 'w') as file:
+            for prompt in prompts:
+                file.write(f"{prompt['id']}, {prompt['name']}, {prompt['content']}\n")
+
+        return {"message": "Prompt updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
