@@ -13,6 +13,9 @@ import logging
 import random
 import traceback
 
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
+
 # Thiết lập logging chi tiết
 logging.basicConfig(
     level=logging.INFO,
