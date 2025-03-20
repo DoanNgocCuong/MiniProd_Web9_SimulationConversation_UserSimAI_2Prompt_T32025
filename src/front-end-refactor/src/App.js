@@ -92,7 +92,7 @@ function App() {
     React.useEffect(() => {
         const url = window.location.hostname === 'localhost'
             ? 'http://localhost:25050'
-            : `http://${window.location.hostname}:25050`;
+            : `http://103.253.20.13:25050`;
         setApiUrl(url);
         console.log("API URL set to:", url);
     }, []);
@@ -134,7 +134,7 @@ function App() {
     useEffect(() => {
         const fetchUserPrompts = async () => {
             try {
-                const response = await fetch('http://127.0.0.1:25050/get-prompts');
+                const response = await fetch('http://103.253.20.13:25050/get-prompts');
                 if (!response.ok) {
                     throw new Error('Failed to fetch user prompts');
                 }
