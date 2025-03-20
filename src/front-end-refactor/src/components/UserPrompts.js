@@ -41,60 +41,48 @@ const UserPrompts = ({
     };
 
     // Thêm hàm xử lý việc save
-    const handleSavePrompt = (promptId, newContent) => {
-        console.log('Attempting to save prompt:', {
-            promptId,
-            newContent: newContent.substring(0, 100) + '...',
-            currentEditingId: editingId
-        });
-        
+    const handleSavePrompt = async (promptId, newContent) => {
+        if (!promptId || !newContent) {
+            setSaveStatus('error');
+            return;
+        }
+
         try {
-            // Kiểm tra dữ liệu đầu vào
-            if (!promptId || !newContent) {
-                console.error('Invalid save data:', { promptId, newContent });
-                setSaveStatus('error');
-                return;
+            const promptToUpdate = userPrompts.find(prompt => prompt.id === promptId);
+            const response = await fetch('http://127.0.0.1:25050/update-prompt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: promptId,
+                    name: promptToUpdate.name,
+                    content: newContent
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update prompt');
             }
 
-            // Tạo bản sao mới của mảng prompts với nội dung đã cập nhật
             const updatedPrompts = userPrompts.map(prompt => {
                 if (prompt.id === promptId) {
-                    console.log('Updating prompt:', {
-                        id: prompt.id,
-                        oldContent: prompt.content.substring(0, 50) + '...',
-                        newContent: newContent.substring(0, 50) + '...',
-                        selected: prompt.selected // Log trạng thái selected
-                    });
-                    // Giữ nguyên các thuộc tính khác của prompt, chỉ cập nhật content
                     return { 
                         ...prompt,
                         content: newContent
-                        // selected giữ nguyên giá trị cũ
                     };
                 }
                 return prompt;
             });
 
-            console.log('Updated prompts array:', {
-                totalPrompts: updatedPrompts.length,
-                updatedPrompt: updatedPrompts.find(p => p.id === promptId)
-            });
-
-            // Gọi hàm từ props để cập nhật state ở component cha
             onUpdatePrompts(updatedPrompts);
-            console.log('Called onUpdatePrompts with new data');
-
-            // Hiển thị thông báo thành công
             setSaveStatus('success');
-            
-            // Đóng form edit sau 1 giây
             setTimeout(() => {
                 setEditingId(null);
                 setSaveStatus(null);
             }, 1000);
-
         } catch (error) {
-            console.error('Error saving prompt:', error);
+            console.error('Error updating prompt:', error);
             setSaveStatus('error');
         }
     };
@@ -185,7 +173,7 @@ const UserPrompts = ({
                                 {/* Nút Edit */}
                                 <button 
                                     className="absolute -top-1 -right-1 bg-purple-500 text-white rounded-full p-1 shadow-lg border-2 border-gray-900 hover:bg-purple-600 transition-all z-10"
-                                    onClick={(e) => {
+                                    onClick={(e) => { 
                                         e.stopPropagation();
                                         handleStartEdit(prompt.id, prompt.content);
                                     }}
@@ -235,7 +223,7 @@ const UserPrompts = ({
                                         isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
                                     } text-xs border ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
                                         <div className="font-bold mb-1">
-                                            {getUserNameFromContent(prompt.content)} - Prompt {index + 1}
+                                            {prompt.name} - Prompt {index + 1}
                                         </div>
                                         <div className="text-xs whitespace-pre-wrap max-h-60 overflow-y-auto">
                                             {prompt.content || "Empty prompt"}
@@ -300,7 +288,7 @@ const UserPrompts = ({
 
                                 {/* Tên/nhãn của prompt */}
                                 <div className={`text-center mt-1 text-xs truncate ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                                    {getUserNameFromContent(prompt.content)}
+                                    {prompt.name}
                                 </div>
                             </div>
                         </div>

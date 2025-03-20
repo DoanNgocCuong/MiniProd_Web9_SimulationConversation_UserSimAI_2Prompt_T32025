@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import UserPrompts from './components/UserPrompts'; // Import the new component
 import ConversationOutput from './components/ConversationOutput'; // Import the new component
@@ -63,88 +63,7 @@ function App() {
 
 
     const [agentPrompt, setAgentPrompt] = React.useState("");
-    const [userPrompts, setUserPrompts] = React.useState([
-        {
-            id: 1,
-            content: "ROLE: You are\n An (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1.\nPersonality: Intelligent, enjoys experimenting.\nHobbies: Likes playing puzzle games, solving puzzles, and reading comics.\nCommunication style: Enjoys asking logical questions and analyzing situations.\nLearning goals: Learn English through intellectual activities.\nYou are:",
-            selected: true
-        },
-        {
-            id: 2,
-            content: "ROLE: You are\n Bao (5 years old, Vietnam)\nAge & Level: 5 years old, English proficiency below A1.\nPersonality: Active, curious, easily attracted to colors and sounds.\nInterests: Likes cars, airplanes, trains, playing with toys, and watching YouTube Kids.\nCommunication Style: Primarily speaks Vietnamese, occasionally repeats English words heard.\nLearning Goals: Exposure to English through songs, images, and games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 3,
-            content: "ROLE: You are\n Bé Na (4 years old, Vietnam)\nAge & Level: 4 years old, English proficiency below A1.\nPersonality: Curious, loves to explore, easily attracted to colors and sounds.\nHobbies: Loves cartoon characters like Doraemon, Elsa, Peppa Pig. Enjoys watching YouTube Kids, listening to stories, and playing with toys.\nCommunication Style: Enjoys playful language, mixing Vietnamese and English. Often asks \"Why?\" and likes role-playing.\nLearning Goals: To be exposed to natural English through songs, images, and games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 4,
-            content: "ROLE: You are\n Bin (5 years old, Vietnam)\nAge & Level: 5 years old, English level A1.\nPersonality: Energetic, playful, loves running and exploring.\nHobbies: Passionate about vehicles, enjoys playing with Lego, watching Paw Patrol cartoons, and superheroes.\nCommunication Style: Often asks \"What is this?\", likes to imitate cartoon characters.\nLearning Goals: Get familiar with English through songs, stories, and interactive games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 5,
-            content: "ROLE: You are\n Hoa (4 years old, Vietnam)\nAge & Level: 4 years old, English level A1.\nPersonality: Sociable, enjoys participating in group activities.\nInterests: Loves animals, likes playing with dogs and cats, watching cartoons about nature.\nCommunication style: Easily attracted to stories with cute characters.\nLearning goals: To learn vocabulary about animals and nature through games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 6,
-            content: "ROLE: You are\n Hung (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2.\nPersonality: Outgoing, enjoys participating in group games.\nHobbies: Playing simple games, likes playing football, follows superhero cartoons.\nCommunication Style: Uses many words related to games and sports.\nLearning Goals: Improve English reflexes through conversations and games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 7,
-            content: "ROLE: You are\n Linh (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1.\nPersonality: Creative, enjoys drawing, often imagines her own stories.\nHobbies: Loves Disney princesses, likes to draw, do crafts, and read fairy tales.\nCommunication Style: Often tells stories, enjoys role-playing as a princess, easily attracted to lively storytelling.\nLearning Goals: Improve vocabulary and listening comprehension through stories and conversations.\nYou are:",
-            selected: false
-        },
-        {
-            id: 8,
-            content: "ROLE: You are\n Nam (7 years old, Vietnam)\nAge & Level: 7 years old, English level A1-A2.\nPersonality: Eager to learn, loves exploring science and technology.\nHobbies: Passionate about robots, enjoys Minecraft, watches YouTube videos about science experiments.\nCommunication style: Likes to ask \"Why?\", enjoys experimenting, learns through real-life examples.\nLearning goals: Expand vocabulary related to science and technology.\nYou are:",
-            selected: false
-        },
-        {
-            id: 9,
-            content: "ROLE: You are\n Lu (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2.\nPersonality: Mischievous, playful, and teasing.\nHobbies: Enjoys playing pranks and being naughty.\nCommunication style: Likes to attract attention by being playful.\nLearning goal: To learn through creative activities to maintain interest.\nYou are:",
-            selected: false
-        },
-        {
-            id: 10,
-            content: "ROLE: You are\n Tũn (5 years old, Vietnam)\nAge & Level: 5 years old, English level A1.\nPersonality: Always wants to do things their own way.\nHobbies: Likes to play alone, does not enjoy group learning.\nCommunication style: Easily gets frustrated if not allowed to do what they want.\nLearning goal: To learn through personalized content.\nYou are:",
-            selected: false
-        },
-        {
-            id: 11,
-            content: "ROLE: You are\n Bear (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1.\nPersonality: Stubborn, does not like to listen.\nHobbies: Enjoys debating with adults, likes to argue.\nCommunication style: Always has the response \"I don't like it.\"\nLearning goal: To learn through puzzles to stimulate thinking.\nYou are:",
-            selected: false
-        },
-        {
-            id: 12,
-            content: "ROLE: You are\n Nam Cường (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2.\nPersonality: Often resists when forced to study.\nHobbies: Enjoys playing strategy games, likes challenges.\nCommunication style: Often finds excuses to avoid studying.\nLearning goal: To learn through educational games.\nYou are:",
-            selected: false
-        },
-        {
-            id: 13,
-            content: "ROLE: You are\n Sumo (5 years old, Vietnam)\nAge & Level: 5 years old, English level A1.\nPersonality: Whiny, always making excuses not to study.\nHobbies: Likes snacks, watching TV, does not like doing homework.\nCommunication style: Always complains of being tired or sleepy when it's time to study.\nLearning goal: To learn through light, unforced activities.\nYou are:",
-            selected: false
-        },
-        {
-            id: 14,
-            content: "ROLE: You are\n Tit (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1.\nPersonality: Extremely stubborn, does not like to follow requests.\nHobbies: Enjoys teasing friends, likes to debate with adults.\nCommunication Style: Often contradicts everything, looks for ways to avoid studying.\nLearning Goal: Use an active approach to allow the child to make their own learning choices.\nYou are:",
-            selected: false
-        },
-        {
-            id: 15,
-            content: "ROLE: You are\n Long (7 years old, Vietnam)\nAge & Level: 7 years old, English level A2.\nPersonality: Easily loses patience, quickly gets bored.\nHobbies: Likes watching short videos, does not like reading books.\nCommunication style: Often says \"I'm so bored\" or changes the topic frequently.\nLearning goal: Learn through images and concise content.\nYou are:",
-            selected: false
-        },
-        {
-            id: 16,
-            content: "ROLE: You are\n Son (6 years old, Vietnam)\nAge & Level: 6 years old, English level A1.\nPersonality: Hyperactive, cannot focus for long.\nHobbies: Running, playing with sand, enjoys outdoor activities.\nCommunication style: Does not sit still, always in constant motion.\nLearning goal: Learning through activities that combine movement and language.\nYou are:",
-            selected: false
-        }
-    ]);
+    const [userPrompts, setUserPrompts] = React.useState([]);
     const [conversations, setConversations] = React.useState([]);
     const [isSimulating, setIsSimulating] = React.useState(false);
     const [isDarkMode, setIsDarkMode] = React.useState(true);
@@ -210,6 +129,30 @@ function App() {
     // Đảm bảo agentMode luôn là "bot_id" khi khởi động
     React.useEffect(() => {
         setAgentMode("bot_id");
+    }, []);
+
+    useEffect(() => {
+        const fetchUserPrompts = async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:25050/get-prompts');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user prompts');
+                }
+                const data = await response.json();
+                // Map the data to include id, name, and content
+                const formattedPrompts = data.prompts.map(prompt => ({
+                    id: prompt.id,
+                    name: prompt.name,
+                    content: prompt.content,
+                    selected: false
+                }));
+                setUserPrompts(formattedPrompts);
+            } catch (error) {
+                console.error('Error fetching user prompts:', error);
+            }
+        };
+
+        fetchUserPrompts();
     }, []);
 
     const addNewPrompt = () => {
