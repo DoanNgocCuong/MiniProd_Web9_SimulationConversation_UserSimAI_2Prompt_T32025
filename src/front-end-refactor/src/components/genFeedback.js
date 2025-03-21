@@ -19,7 +19,7 @@ export const genFeedback = async (conversation, dod) => {
         console.log('DoD:', dod);
         console.log('=== End Inputs ===');
 
-        const response = await fetch('http://localhost:25050/check-dod-gen-feedback', {
+        const response = await fetch('http://103.253.20.13:25050/check-dod-gen-feedback', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

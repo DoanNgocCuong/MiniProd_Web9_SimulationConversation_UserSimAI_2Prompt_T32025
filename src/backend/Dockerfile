@@ -14,9 +14,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir fastapi uvicorn python-dotenv openai>=1.0.0 aiohttp requests typing-extensions
 
 # Copy các file cần thiết
-COPY main.py .
-COPY def_simulation.py .
-COPY .env .
+COPY . .
 
 # Tạo thư mục logs với quyền đầy đủ
 RUN mkdir -p logs && chmod 777 logs
