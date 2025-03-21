@@ -3,20 +3,18 @@ export const genFeedback = async (conversation, dod) => {
         // Format conversation into a single string
         // Each message should be in format: "User/Bot: message"
         const formattedConversation = conversation.messages
-            .map(msg => `${msg.role === 'user' ? 'User' : 'Bot'}: ${msg.content}`)
+            .map(msg => `${msg.role === 'user' ? 'User' : 'Pika'}: ${msg.content}`)
             .join('\n');
 
         // Add user info at the start of conversation if available
-        const fullConversation = conversation.userInfo 
-            ? `${conversation.userInfo}\n${formattedConversation}`
-            : formattedConversation;
+        // const fullConversation = formattedConversation;
 
         // Log inputs
         console.log('=== genFeedback Inputs ===');
         console.log('Conversation:', {
             userInfo: conversation.userInfo,
             messages: conversation.messages,
-            formattedConversation: fullConversation
+            formattedConversation: formattedConversation
         });
         console.log('DoD:', dod);
         console.log('=== End Inputs ===');
@@ -28,7 +26,7 @@ export const genFeedback = async (conversation, dod) => {
             },
             body: JSON.stringify({
                 inputs: {
-                    conversation: fullConversation,
+                    conversation: formattedConversation,
                     DoD: dod // DoD from AgentMode component
                 },
                 response_mode: 'blocking',
