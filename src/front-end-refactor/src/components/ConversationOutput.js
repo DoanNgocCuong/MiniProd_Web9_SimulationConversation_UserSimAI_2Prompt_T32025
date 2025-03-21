@@ -119,7 +119,7 @@ const ConversationOutput = ({
                             {conversations.map((conversation, index) => (
                                 <div
                                     key={index}
-                                    className={`w-[400px] h-[calc(100vh-500px)] flex-shrink-0 flex flex-col rounded-xl shadow-md transition-all ${
+                                    className={`w-[400px] h-[calc(100vh)] flex-shrink-0 flex flex-col rounded-xl shadow-md transition-all ${
                                         isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
                                     }`}
                                 >
