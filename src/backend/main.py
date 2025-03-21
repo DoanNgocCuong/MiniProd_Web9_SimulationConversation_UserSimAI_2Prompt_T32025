@@ -78,6 +78,11 @@ class PromptUpdate(BaseModel):
     name: str
     content: str
 
+class CheckDoDRequest(BaseModel):
+    inputs: dict
+    response_mode: str
+    user: str
+
 @app.post("/simulate")
 async def simulate(data: dict = Body(...)):
     logger.info(f"Simulate endpoint called with data: {data}")
@@ -213,8 +218,17 @@ log_step(f"API_BASE_URL: {os.environ.get('API_BASE_URL', 'Not set')}")
 
     
 @app.post("/check-dod-gen-feedback")
-async def check_dod():
+async def check_dod(data: CheckDoDRequest):
     try:
+        # Extract conversation and DoD from the request body
+        conversation = data.inputs.get("conversation", "")
+        dod = data.inputs.get("DoD", "")
+
+        # Log the received data for debugging
+        print(f"Received conversation: {conversation}")
+        print(f"Received DoD: {dod}")
+
+        # Make the external request with the received data
         response = requests.post(
             "http://103.253.20.13:5011/v1/workflows/run",
             headers={
@@ -223,14 +237,16 @@ async def check_dod():
             },
             json={
                 "inputs": {
-                    "conversation": "",
-                    "DoD": ""
+                    "conversation": conversation,
+                    "DoD": dod
                 },
-                "response_mode": "blocking",
-                "user": "abc-123"
+                "response_mode": data.response_mode,
+                "user": data.user
             },
             timeout=1800  # 30 minutes
         )
+
+        # Return the response from the external service
         return {
             "status": response.status_code,
             "content": response.json(),  # Convert response text to JSON
@@ -294,45 +310,6 @@ if __name__ == "__main__":
             print("Please install required dependencies:")
             print("pip install fastapi uvicorn typing-extensions")
 
-
-@app.post("/check-dod")
-async def check_dod():
-    try:
-        response = requests.post(
-            "http://103.253.20.13:5011/v1/workflows/run",
-            headers={
-                "Authorization": "Bearer app-o5cIDSJ7ik1kUzc80rsuaiPh",
-                "Content-Type": "application/json",
-            },
-            json={
-                "inputs": {
-                    "conversation": "Pika: chào cậu",
-                    "DoD": "abv"
-                },
-                "response_mode": "blocking",
-                "user": "abc-123"
-            },
-            timeout=1800  # 30 minutes
-        )
-        return {
-            "status": response.status_code,
-            "content": response.json(),  # Convert response text to JSON
-            "time": time.time()
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@app.get("/debug")
-async def debug():
-    return {
-        "status": "running",
-        "time": time.time(),
-        "environment": os.environ.get("ENVIRONMENT", "development"),
-        "python_version": sys.version,
-        "hostname": socket.gethostname(),
-        "ip": socket.gethostbyname(socket.gethostname())
-    }
 
 @app.post("/update-prompt")
 async def update_prompt(prompt_update: PromptUpdate):
