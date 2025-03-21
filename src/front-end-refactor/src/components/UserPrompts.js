@@ -49,7 +49,7 @@ const UserPrompts = ({
 
         try {
             const promptToUpdate = userPrompts.find(prompt => prompt.id === promptId);
-            const response = await fetch('http://127.0.0.1:25050/update-prompt', {
+            const response = await fetch('http://103.253.20.13:25050/update-prompt', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -11,8 +11,8 @@ async def check_dod():
             },
             json={
                 "inputs": {
-                    "conversation": "Pika: chào cậu",
-                    "DoD": "abv"
+                    "conversation": "",
+                    "DoD": ""
                 },
                 "response_mode": "blocking",
                 "user": "abc-123"
