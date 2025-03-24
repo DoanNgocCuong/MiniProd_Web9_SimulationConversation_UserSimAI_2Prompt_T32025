@@ -11,9 +11,10 @@ from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from def_simulation import run_simulation_with_params
+from def_run_simulation_with_params import run_simulation_with_params  # Import hàm từ tệp mới
 from utils import read_user_prompts
 from database.db import update_prompt, init_db
+
 
 # Thiết lập logging chi tiết
 logging.basicConfig(
@@ -169,25 +170,6 @@ async def health_check():
         "ip": socket.gethostbyname(socket.gethostname())
     }
 
-# Keep the test function for debugging
-async def test_simulation():
-    logger.info("Running test simulation")
-    print("test_simulation")
-    # Test the run_simulation_with_params function with custom parameters
-    try:
-        result = await run_simulation_with_params(
-            bot_id=16,
-            user_prompt="xin chào",
-            max_turns=3,
-            history=None
-        )
-        
-        # Print results
-        print(result)
-        logger.info("Test simulation completed successfully")
-    except Exception as e:
-        logger.error(f"Test simulation failed: {str(e)}")
-        logger.error(traceback.format_exc())
 
 
 # Hàm ghi log chi tiết
@@ -258,17 +240,22 @@ async def check_dod(data: CheckDoDRequest):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/update-prompt")
+async def update_prompt_endpoint(prompt_update: PromptUpdate):
+    try:
+        success = update_prompt(
+            prompt_update.id,
+            prompt_update.name,
+            prompt_update.content
+        )
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Prompt not found")
 
-@app.get("/debug")
-async def debug():
-    return {
-        "status": "running",
-        "time": time.time(),
-        "environment": os.environ.get("ENVIRONMENT", "development"),
-        "python_version": sys.version,
-        "hostname": socket.gethostname(),
-        "ip": socket.gethostbyname(socket.gethostname())
-    }
+        return {"message": "Prompt updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # In Docker, we don't need to find an available port
@@ -314,18 +301,3 @@ if __name__ == "__main__":
             print("pip install fastapi uvicorn typing-extensions")
 
 
-@app.post("/update-prompt")
-async def update_prompt_endpoint(prompt_update: PromptUpdate):
-    try:
-        success = update_prompt(
-            prompt_update.id,
-            prompt_update.name,
-            prompt_update.content
-        )
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Prompt not found")
-
-        return {"message": "Prompt updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))

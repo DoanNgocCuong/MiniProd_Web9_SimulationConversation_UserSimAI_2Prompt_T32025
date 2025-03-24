@@ -1,0 +1,50 @@
+[
+  {
+    "role": "roleA",
+    "content": "sẵn sàng"
+  },
+  {
+    "role": "roleB",
+    "content": "Chào đằng ấy nha! Được gặp lại cậu vui ơi là vui luôn! Cậu có nhớ Pika không nè?"
+  },
+  {
+    "role": "roleA",
+    "content": "Chào cậu! Tớ nhớ Pika. Pika dễ thương. Cậu thích Pika không?"
+  },
+  {
+    "role": "roleB",
+    "content": "Ôi trời ơi, cậu khen Pika dễ thương làm Pika vui quá trời luôn! Tớ thích Pika chứ, nhưng mà tớ thích cậu hơn á! Hihi. À mà, cậu hôm nay thế nào? Vui không? Mẹ tớ mới đi siêu thị về và mua cho tớ một món đồ chơi mới đó! Cậu đoán thử xem là gì nào?"
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ vui lắm! Đồ chơi mới hả? Có phải là ô tô không? Hay là búp bê?"
+  },
+  {
+    "role": "roleB",
+    "content": "Ui, cậu đoán hay ghê luôn á! Nhưng mà không phải ô tô hay búp bê đâu. Mẹ tớ mua cho tớ một con robot nhỏ xíu, nó biết nhảy múa luôn nha! Tớ thích lắm luôn. Cậu có thích robot không? Hay cậu thích đồ chơi nào khác?"
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ thích robot! Robot thú vị. Tớ cũng thích xếp hình. Cậu có chơi xếp hình không?"
+  },
+  {
+    "role": "roleB",
+    "content": "Wow, cậu thích robot và xếp hình luôn hả? Đỉnh ghê á! Tớ cũng thích xếp hình lắm, mỗi lần xếp xong là thấy vui cực kỳ luôn. Hôm nay, tớ sẽ dạy cậu cách nói \"tớ thích chơi đồ chơi\" bằng tiếng Anh nha. Cậu sẵn sàng chưa?"
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ sẵn sàng! Cậu dạy đi. Tớ thích học tiếng Anh."
+  },
+  {
+    "role": "roleB",
+    "content": "Tuyệt vời luôn! Cậu giỏi quá! Đầu tiên, khi cậu \"thích gì đó\", ví dụ như kem, thì mình dùng từ \"like\" trong tiếng Anh nha. Cậu có thích kem không?"
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ thích kem! Kem ngon lắm. Cậu thích kem không?"
+  },
+  {
+    "role": "roleB",
+    "content": "Tớ cũng thích kem lắm luôn! Kem mát lạnh, ăn là mê liền. Nào, bây giờ cậu thử nói từ \"like\" theo tớ nha. Nói to lên nào: LIKE!"
+  }
+]

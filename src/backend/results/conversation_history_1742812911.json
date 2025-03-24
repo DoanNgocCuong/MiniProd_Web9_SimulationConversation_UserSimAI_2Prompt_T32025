@@ -1,0 +1,34 @@
+[
+  {
+    "role": "roleA",
+    "content": "sẵn sàng"
+  },
+  {
+    "role": "roleB",
+    "content": "Hôm nay, tớ mới tìm hiểu được về 5 loài động vật to nhất trên Trái Đất. Cậu có tò mò không?"
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ rất tò mò. Cậu nói đi."
+  },
+  {
+    "role": "roleB",
+    "content": "Đầu tiên là Cá voi xanh, tiếng Anh gọi là Blue Whale. Nó có thể dài 30 mét, cỡ một tòa nhà 10 tầng. Trên sao Hỏa, tớ chưa thấy con nào dài cỡ đó, chắc bơi một cái là hết cả đại dương! Trong tiếng Anh, cá voi là Whale. Cậu đọc thử, Whale."
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ đọc được. Whale. Thú vị quá!"
+  },
+  {
+    "role": "roleB",
+    "content": "Loài thứ hai, Voi châu Phi, tiếng Anh là African Elephant. Nó nặng 6–7 tấn, tương đương 3–4 chiếc ô tô. Tớ mà leo lên nó chắc bị hất bay về sao Hỏa mất. Con voi tiếng Anh là elephant. Cậu đọc thử: Elephant."
+  },
+  {
+    "role": "roleA",
+    "content": "Tớ đọc được. Elephant. Nghe hay quá!"
+  },
+  {
+    "role": "roleB",
+    "content": "Loài thứ ba: Cá mập voi, tiếng Anh là Whale Shark. Chắc cậu cũng nghe bài hát Baby Shark rồi, nhưng cá mập voi thì to lắm chứ không phải baby đâu. Nó có thể dài hơn 10 mét, như một chiếc xe buýt. Cậu thử nói nha: Shark."
+  }
+]
