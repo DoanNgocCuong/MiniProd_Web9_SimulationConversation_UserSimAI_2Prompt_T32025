@@ -133,22 +133,58 @@ function App() {
 
     useEffect(() => {
         const fetchUserPrompts = async () => {
+            console.log('=== Starting fetchUserPrompts ===');
             try {
+                // Log request
+                console.log('Sending GET request to:', 'http://103.253.20.13:25050/get-prompts');
                 const response = await fetch('http://103.253.20.13:25050/get-prompts');
+                
+                // Log response status and headers
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
                 if (!response.ok) {
-                    throw new Error('Failed to fetch user prompts');
+                    const errorText = await response.text();
+                    console.error('Response error:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        body: errorText
+                    });
+                    throw new Error(`Failed to fetch user prompts: ${response.status} ${errorText}`);
                 }
+                
+                // Log raw response
                 const data = await response.json();
-                // Map the data to include id, name, and content
-                const formattedPrompts = data.prompts.map(prompt => ({
-                    id: prompt.id,
-                    name: prompt.name,
-                    content: prompt.content,
-                    selected: false
-                }));
+                console.log('Raw response data:', data);
+                
+                // Validate data structure
+                if (!data.prompts || !Array.isArray(data.prompts)) {
+                    console.error('Invalid data format:', data);
+                    throw new Error('Invalid data format received');
+                }
+                
+                // Log formatted prompts
+                const formattedPrompts = data.prompts.map(prompt => {
+                    console.log('Processing prompt:', prompt);
+                    return {
+                        id: prompt.id || Date.now(),
+                        name: prompt.name || 'Untitled',
+                        content: prompt.content || '',
+                        selected: false
+                    };
+                });
+                
+                console.log('Final formatted prompts:', formattedPrompts);
                 setUserPrompts(formattedPrompts);
+                console.log('=== fetchUserPrompts completed successfully ===');
+                
             } catch (error) {
-                console.error('Error fetching user prompts:', error);
+                console.error('=== fetchUserPrompts failed ===');
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                setUserPrompts([]);
             }
         };
 

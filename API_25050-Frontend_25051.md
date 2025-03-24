@@ -10,7 +10,7 @@ curl -X 'POST' \
 ```
 
 
-curl -X POST "http://localhost:25050/simulate" \
+curl -X POST "http://103.253.20.13:25050/simulate" \
 -H "Content-Type: application/json" \
 -d '{
     "bot_id": 1,

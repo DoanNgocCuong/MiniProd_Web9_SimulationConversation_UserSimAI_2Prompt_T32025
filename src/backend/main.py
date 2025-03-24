@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from def_simulation import run_simulation_with_params
 from utils import read_user_prompts
+from database.db import update_prompt, init_db
 
 # Thiết lập logging chi tiết
 logging.basicConfig(
@@ -36,12 +37,14 @@ logger.info(f"CORS origins: {cors_origins}")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Initialize database when starting the application
+init_db()
 
 @app.get("/get-prompts")
 async def get_prompts():
@@ -312,25 +315,16 @@ if __name__ == "__main__":
 
 
 @app.post("/update-prompt")
-async def update_prompt(prompt_update: PromptUpdate):
-    file_path = "user_prompts.txt"
+async def update_prompt_endpoint(prompt_update: PromptUpdate):
     try:
-        # Read existing prompts
-        prompts = read_user_prompts(file_path)
+        success = update_prompt(
+            prompt_update.id,
+            prompt_update.name,
+            prompt_update.content
+        )
         
-        # Update the specific prompt
-        for prompt in prompts:
-            if prompt['id'] == prompt_update.id:
-                prompt['name'] = prompt_update.name
-                prompt['content'] = prompt_update.content
-                break
-        else:
+        if not success:
             raise HTTPException(status_code=404, detail="Prompt not found")
-
-        # Write back to the file
-        with open(file_path, 'w') as file:
-            for prompt in prompts:
-                file.write(f"{prompt['id']}, {prompt['name']}, {prompt['content']}\n")
 
         return {"message": "Prompt updated successfully"}
     except Exception as e:
