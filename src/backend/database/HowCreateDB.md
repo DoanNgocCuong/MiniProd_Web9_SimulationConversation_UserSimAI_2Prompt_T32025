@@ -116,6 +116,7 @@ SELECT * FROM user_prompts;
    - Efficient updates
    - Better scalability
 
+
 3. **Maintainability**
    - Easier to backup
    - Better data structure
