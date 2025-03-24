@@ -280,11 +280,23 @@ function App() {
 
                 // Kiểm tra nếu có dữ liệu conversation từ API
                 if (data.conversation && Array.isArray(data.conversation)) {
-                    messages = data.conversation.map(msg => ({
-                        role: msg.role.toLowerCase(), // chuyển "User"/"Bot" thành "user"/"assistant"
-                        content: msg.content,
-                        timestamp: new Date().toISOString() // Thêm timestamp vì API không cung cấp
-                    }));
+                    messages = data.conversation.map(msg => {
+                        // Chuyển đổi roleA thành user và roleB thành assistant
+                        let standardRole = msg.role;
+                        if (msg.role === "roleA") {
+                            standardRole = "user";
+                        } else if (msg.role === "roleB") {
+                            standardRole = "assistant";
+                        } else {
+                            standardRole = msg.role.toLowerCase(); // Giữ lại chuyển đổi cũ cho các role khác
+                        }
+                        
+                        return {
+                            role: standardRole,
+                            content: msg.content,
+                            timestamp: new Date().toISOString() // Thêm timestamp vì API không cung cấp
+                        };
+                    });
                 } else if (data.messages && Array.isArray(data.messages)) {
                     // Nếu API đã trả về dạng messages
                     messages = data.messages;
