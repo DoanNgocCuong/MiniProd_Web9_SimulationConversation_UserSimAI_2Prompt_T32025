@@ -8,3 +8,13 @@ curl -X 'POST' \
   "max_turns": 10
 }'
 ```
+
+
+curl -X POST "http://localhost:25050/simulate" \
+-H "Content-Type: application/json" \
+-d '{
+    "bot_id": 1,
+    "user_prompt": "Xin chào, bạn có khỏe không?",
+    "max_turns": 3,
+    "history": []
+}'
