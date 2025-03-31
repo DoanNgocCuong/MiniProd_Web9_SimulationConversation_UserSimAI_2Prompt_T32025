@@ -25,3 +25,11 @@ node_modules/
 
 # Docker volumes
 data/
+
+results/
+
+# Results folder
+results/
+
+# Results folder
+results/

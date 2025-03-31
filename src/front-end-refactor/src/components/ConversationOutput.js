@@ -23,6 +23,37 @@ const convert_to_postman_body = (data, user_intro = "") => {
     return output.slice(0, -2); // Remove the last \n
 };
 
+// Add this helper function at the top of file after other utility functions
+const copyToClipboard = async (text) => {
+    // Modern API method
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.warn('Copy failed using Clipboard API:', err);
+        }
+    }
+
+    // Fallback: Create temporary textarea element
+    try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        return true;
+    } catch (err) {
+        console.error('Copy failed using fallback:', err);
+        return false;
+    }
+};
+
 // Report Popup Component
 const ReportPopup = ({ data, setShowReportPopup, setReportData, isGeneratingReport, error }) => {
     // Define column order and display names
@@ -303,15 +334,31 @@ const ConversationOutput = ({
                                             <div className="flex items-center gap-2">
                                                 {/* Copy JSON Button */}
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         const jsonData = formatConversationToJson(conversation.messages || []);
                                                         const formattedText = convert_to_postman_body(jsonData);
-                                                        navigator.clipboard.writeText(formattedText);
-                                                        // Optional: Add visual feedback
                                                         const btn = document.activeElement;
                                                         const originalText = btn.innerText;
-                                                        btn.innerText = 'Copied!';
-                                                        setTimeout(() => btn.innerText = originalText, 2000);
+                                                        
+                                                        try {
+                                                            const success = await copyToClipboard(formattedText);
+                                                            if (success) {
+                                                                btn.innerText = 'Copied!';
+                                                                btn.classList.add('bg-green-600/50');
+                                                            } else {
+                                                                btn.innerText = 'Failed!';
+                                                                btn.classList.add('bg-red-600/50');
+                                                            }
+                                                        } catch (error) {
+                                                            console.error('Copy operation failed:', error);
+                                                            btn.innerText = 'Failed!';
+                                                            btn.classList.add('bg-red-600/50');
+                                                        } finally {
+                                                            setTimeout(() => {
+                                                                btn.innerText = originalText;
+                                                                btn.classList.remove('bg-green-600/50', 'bg-red-600/50');
+                                                            }, 2000);
+                                                        }
                                                     }}
                                                     className={`px-2 py-1 text-xs rounded-full ${
                                                         isDarkMode

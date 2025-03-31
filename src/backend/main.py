@@ -17,6 +17,8 @@ import httpx
 import asyncio
 import socket
 import traceback
+from def_run_simulation_with_params import run_simulation_with_params  # Import hàm từ tệp mới
+
 
 # Thiết lập logging chi tiết
 logging.basicConfig(
