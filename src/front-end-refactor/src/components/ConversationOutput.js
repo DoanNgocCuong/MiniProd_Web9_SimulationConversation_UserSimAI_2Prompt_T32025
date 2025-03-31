@@ -2,6 +2,114 @@
 import React, { useState, useEffect } from 'react';
 import { genFeedback } from './genFeedback';
 
+// Add these functions at the top of your file, after the imports
+const formatConversationToJson = (messages) => {
+    const formattedConversation = messages.map(msg => ({
+        character: msg.role === 'user' ? 'USER' : 'BOT_RESPONSE_CONVERSATION',
+        content: msg.content
+    }));
+    return formattedConversation; // Return array instead of string
+};
+
+const convert_to_postman_body = (data, user_intro = "") => {
+    let output = user_intro + "\\n";
+    for (const item of data) {
+        if (item.character === "USER") {
+            output += "User: " + item.content + "\\n";
+        } else if (item.character === "BOT_RESPONSE_CONVERSATION") {
+            output += "Bot: " + item.content + "\\n";
+        }
+    }
+    return output.slice(0, -2); // Remove the last \n
+};
+
+// Report Popup Component
+const ReportPopup = ({ data, setShowReportPopup, setReportData, isGeneratingReport, error }) => {
+    // Define column order and display names
+    const columnOrder = [
+        "Pika - Câu nói chính",
+        "Câu trả lời trước kia kid",
+        "Pika - câu fast response",
+        "Câu trả lời của kid",
+        "Độ dễ hiểu của từ ngữ",
+        "Độ dễ hiểu của nội dung",
+        "Độ phức tạp của yêu cầu",
+        "Độ khó của yêu cầu",
+        "Vi phạm quy chuẩn nội dung",
+        "Trẻ trả lời được",
+        "Dự đoán cảm xúc của trẻ"
+    ];
+
+    if (!data && !isGeneratingReport && !error) return null;
+
+    const displayData = error ? null : data;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Report Results</h2>
+                    <button
+                        onClick={() => {
+                            setShowReportPopup(false);
+                            setReportData(null);
+                        }}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                        <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="overflow-auto max-h-[calc(90vh-8rem)]">
+                    {isGeneratingReport ? (
+                        <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+                            <span className="ml-2 text-gray-700 dark:text-gray-300">Generating report...</span>
+                        </div>
+                    ) : displayData ? (
+                        <div className="p-4">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            {columnOrder.map((column, index) => (
+                                                <th
+                                                    key={index}
+                                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                                                >
+                                                    {column}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        {displayData.choices[0].message.content.conversation.map((row, rowIndex) => (
+                                            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                                                {columnOrder.map((column, colIndex) => (
+                                                    <td key={`${rowIndex}-${colIndex}`} className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">
+                                                        {row[column] || '-'}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-6">
+                            <div className="bg-red-100 dark:bg-red-900 rounded-lg p-4 text-red-700 dark:text-red-200">
+                                {error ? error.message : 'Failed to generate report'}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Định nghĩa component ConversationOutput nhận vào các props
 const ConversationOutput = ({
     conversations, // Danh sách các cuộc hội thoại
@@ -10,11 +118,15 @@ const ConversationOutput = ({
     startSimulation, // Hàm bắt đầu mô phỏng
     isSimulating, // Trạng thái đang mô phỏng
     userPrompts, // Danh sách các prompt người dùng
-    formatTime, // Hàm format thời gian
+    formatTime, // Hàm format thởi gian
     dod // Định nghĩa về độ khó (Definition of Done)
 }) => {
     // Khởi tạo state để lưu trữ conversations
     const [conversationsState, setConversations] = useState(conversations);
+    const [showReportPopup, setShowReportPopup] = useState(false);
+    const [reportData, setReportData] = useState(null);
+    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+    const [error, setError] = useState(null);
 
     // useEffect để log ra dod mỗi khi nó thay đổi
     useEffect(() => {
@@ -53,6 +165,56 @@ const ConversationOutput = ({
         }
     };
 
+    // Hàm gọi API để generate report
+    const generateReport = async () => {
+        try {
+            setIsGeneratingReport(true);
+            console.log(conversationsState);
+            
+            // Format conversation data from the current state
+            const conversationText = conversationsState.map(conv => {
+                const messages = [];
+                if (conv.userMessage) {
+                    messages.push(`User: ${conv.userMessage}`);
+                }
+                if (conv.botMessage) {
+                    messages.push(`Bot: ${conv.botMessage}`);
+                }
+                if (conv.result) {
+                    messages.push(`Result: ${JSON.stringify(conv.result)}`);
+                }
+                return messages.join('\n');
+            }).join('\n\n'); // Add extra newline between conversations
+
+            console.log('Sending conversation:', conversationText);
+
+            // Make API call to our backend
+            const response = await fetch('http://localhost:25050/generate-report', {
+                method:'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    conversation: "Bot: Bíp bíp! Vậy món ăn yêu thích của cậu là gì? 🤔\\nUser: Pika đã nghe thấy rồi đó 🤔\\nBot: Ôi, cậu thích món \"welcome\" à? Nghe lạ quá! Trên hành tinh Mars, tớ đã thử một món ăn gọi là \"Martian welcome\" - đó là một loại bánh hình tròn, nhưng nó có màu xanh lá cây và có vị rất nhạt! Thật buồn cười khi mọi người ăn nó và nhảy múa vì vị ngọt quá! Cậu có thích ăn bánh không?\\nUser: I have seen it but I find it so funny so I don't know what the cake is called. So I find it so strange. Then I laugh again.\\nBot: U ki, cậu mình một chút!\\nUser: Haha, cậu thấy món bánh đó! Cậu có thích ăn bánh ngọt không? Hay cậu thích món mặn?"
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate report');
+            }
+
+            const data = await response.json();
+            setReportData(data);
+            setShowReportPopup(true);
+        } catch (error) {
+            console.error('Error generating report:', error);
+            setError(error);
+            alert('Failed to generate report. Please try again.');
+        } finally {
+            setIsGeneratingReport(false);
+        }
+    };
+
     // Render giao diện chính của component
     return (
         // Container chính với hiệu ứng blur và màu nền tùy thuộc dark mode
@@ -75,7 +237,7 @@ const ConversationOutput = ({
                         disabled={isSimulating}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
                         Reset
                     </button>
@@ -100,7 +262,7 @@ const ConversationOutput = ({
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                                 </svg>
                                 Bắt đầu mô phỏng
                             </>
@@ -125,26 +287,81 @@ const ConversationOutput = ({
                                 >
                                     {/* Phần hiển thị kết quả đánh giá */}
                                     <div className="p-3 rounded-t-xl border-b bg-gray-800/50 border-gray-700">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                                conversation?.result?.status === 'pass'
-                                                    ? 'bg-green-900/50 text-green-300'
-                                                    : 'bg-red-900/50 text-red-300'
-                                            }`}>
-                                                {conversation?.result?.status?.toUpperCase() || 'PENDING'}
-                                            </span>
-                                            <span className="text-sm text-gray-300">
-                                                Score: {conversation?.result?.score || 0}/100
-                                            </span>
-                                            {/* Nút tạo lại feedback */}
-                                            {!isSimulating && (
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                    conversation?.result?.status === 'pass'
+                                                        ? 'bg-green-900/50 text-green-300'
+                                                        : 'bg-red-900/50 text-red-300'
+                                                }`}>
+                                                    {conversation?.result?.status?.toUpperCase() || 'PENDING'}
+                                                </span>
+                                                <span className="text-sm text-gray-300">
+                                                    Score: {conversation?.result?.score || 0}/100
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {/* Copy JSON Button */}
                                                 <button
-                                                    onClick={() => generateFeedback(conversation)}
-                                                    className="px-2 py-1 text-xs rounded-full bg-blue-900/50 text-blue-300 hover:bg-blue-800/50"
+                                                    onClick={() => {
+                                                        const jsonData = formatConversationToJson(conversation.messages || []);
+                                                        const formattedText = convert_to_postman_body(jsonData);
+                                                        navigator.clipboard.writeText(formattedText);
+                                                        // Optional: Add visual feedback
+                                                        const btn = document.activeElement;
+                                                        const originalText = btn.innerText;
+                                                        btn.innerText = 'Copied!';
+                                                        setTimeout(() => btn.innerText = originalText, 2000);
+                                                    }}
+                                                    className={`px-2 py-1 text-xs rounded-full ${
+                                                        isDarkMode
+                                                            ? "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50"
+                                                            : "bg-gray-200/50 text-gray-700 hover:bg-gray-300/50"
+                                                    } flex items-center gap-1`}
                                                 >
-                                                    {conversation.result ? 'Regenerate Feedback' : 'Generate Feedback'}
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                                                    </svg>
+                                                    Copy JSON
                                                 </button>
-                                            )}
+                                                {/* Nút tạo lại feedback */}
+                                                {!isSimulating && (
+                                                    <button
+                                                        onClick={() => generateFeedback(conversation)}
+                                                        className="px-2 py-1 text-xs rounded-full bg-blue-900/50 text-blue-300 hover:bg-blue-800/50"
+                                                    >
+                                                        {conversation.result ? 'Regenerate Feedback' : 'Generate Feedback'}
+                                                    </button>
+                                                )}
+                                                {/* Generate Report Button */}
+                                                <button
+                                                    onClick={generateReport}
+                                                    className={`px-3 py-1 text-xs rounded-full ${
+                                                        isDarkMode
+                                                            ? "bg-purple-900/50 text-purple-300 hover:bg-purple-800/50"
+                                                            : "bg-purple-700/50 text-purple-100 hover:bg-purple-600/50"
+                                                    } flex items-center gap-1 ml-2`}
+                                                    disabled={isGeneratingReport}
+                                                >
+                                                    {isGeneratingReport ? (
+                                                        <>
+                                                            <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            <span>Generating...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h4.586a2 2 0 011.707.293l3.414 3.414a2 2 0 01.293 1.707L12.414 15.414l-3.414-3.414a2 2 0 01-.293-1.707l3.414-3.414z" />
+                                                            </svg>
+                                                            <span>Generate Report</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-400">
                                             {conversation?.result?.explanation || 'Waiting for analysis...'}
@@ -231,12 +448,15 @@ const ConversationOutput = ({
                         disabled={isSimulating || !userPrompts.some(p => p.selected)}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                         </svg>
                         Start Simulation
                     </button>
                 </div>
             )}
+
+            {/* Report Popup */}
+            {showReportPopup && <ReportPopup data={reportData} setShowReportPopup={setShowReportPopup} setReportData={setReportData} isGeneratingReport={isGeneratingReport} error={error} />}
         </div>
     );
 };

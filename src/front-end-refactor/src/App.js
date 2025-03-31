@@ -261,7 +261,7 @@ function App() {
                 // Thêm local CORS proxy nếu đang chạy trên localhost
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     // apiEndpoint = `http://localhost:8080/${apiEndpoint}`;
-                    apiEndpoint = 'http://localhost:25050/simulate'
+                    apiEndpoint = 'https://websim-api-dev.hacknao.edu.vn/simulate'
                 }
 
                 const response = await fetch(apiEndpoint, {
