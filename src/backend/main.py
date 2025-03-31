@@ -1,20 +1,22 @@
-import asyncio
-import socket
-import logging
-import time
-import traceback
 import os
+import logging
+from sqlite3 import paramstyle
 import sys
 import requests
 import json
+import time
 from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from def_run_simulation_with_params import run_simulation_with_params  # Import hàm từ tệp mới
+from datetime import datetime
 from utils import read_user_prompts
 from database.db import update_prompt, init_db
-
+import httpx
+import asyncio
+import socket
+import traceback
 
 # Thiết lập logging chi tiết
 logging.basicConfig(
@@ -86,6 +88,9 @@ class CheckDoDRequest(BaseModel):
     inputs: dict
     response_mode: str
     user: str
+
+class ReportRequest(BaseModel):
+    conversation: str
 
 @app.post("/simulate")
 async def simulate(data: dict = Body(...)):
@@ -200,8 +205,6 @@ log_step(f"Current directory: {os.getcwd()}")
 log_step(f"Environment variables: OPENAI_API_KEY exists: {'Yes' if os.environ.get('OPENAI_API_KEY') else 'No'}")
 log_step(f"API_BASE_URL: {os.environ.get('API_BASE_URL', 'Not set')}")
 
-
-    
 @app.post("/check-dod-gen-feedback")
 async def check_dod(data: CheckDoDRequest):
     try:
@@ -256,7 +259,63 @@ async def update_prompt_endpoint(prompt_update: PromptUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/generate-report")
+async def generate_report(request: Request):
+    try:
+        data = await request.json()
+        conversation = data.get('conversation')
+        print(f"Conversationsss: {conversation}")
 
+        if not conversation:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Missing conversation text"}
+            )
+
+        # Call n8n API to generate report
+        n8n_url = "https://n8n.hacknao.edu.vn/webhook/1ca924af-dc7d-460b-82e6-18b9c7fea7ac"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        params = {
+            "conversation": conversation
+        }
+        
+        print(f"Conversationsss2: {params}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(n8n_url, headers=headers, json=params)
+        
+        if response.status_code != 200:
+            logging.error(f"Error from n8n API: {response.text}")
+            print(f"Error from n8n API: {response.text}")
+            return JSONResponse(
+                status_code=response.status_code,
+                content={"error": "Failed to generate report"}
+            )
+
+        # Parse and validate response
+        try:
+            response_data = response.json()
+            print(f"Response from n8n API: {response_data}")
+            
+            # Validate response structure
+            if not isinstance(response_data, dict) or 'choices' not in response_data:
+                raise ValueError("Invalid response format from n8n API")
+                
+            return JSONResponse(content=response_data)
+        except ValueError as ve:
+            logging.error(f"Invalid response format: {str(ve)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Invalid response format from n8n API"}
+            )
+
+    except Exception as e:
+        logging.error(f"Error generating report: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Internal server error: {str(e)}"}
+        )
 
 # In Docker, we don't need to find an available port
 # The port is fixed in the Dockerfile and docker-compose.yml
@@ -299,5 +358,3 @@ if __name__ == "__main__":
             print(error_msg)
             print("Please install required dependencies:")
             print("pip install fastapi uvicorn typing-extensions")
-
-
